@@ -45,4 +45,8 @@ public class RoomService {
     public GameRoom getRoom(String roomId) {
         return activeRooms.get(roomId);
     }
+
+    public void removeRoom(String roomId) {
+        activeRooms.remove(roomId);
+    }
 }
