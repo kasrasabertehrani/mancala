@@ -6,14 +6,15 @@ public class Game {
         WAITING_FOR_PLAYER_2,
         PLAYER_1_TURN,
         PLAYER_2_TURN,
-        GAME_OVER
+        GAME_OVER,
+        PLAYER_DISCONNECTED
     }
 
     private final Player player1;
     private Player player2;
     private final Board board;
     private GameStatus gameStatus;
-
+    private String disconnectedPlayerId;
     // --- 1. CONSTRUCTOR & INITIALIZATION ---
 
     public Game(Player player1) {
@@ -73,7 +74,22 @@ public class Game {
         }
     }
 
+    public void handleDisconnect(String playerId) {
+        if (player2 == null) {
+            this.gameStatus = GameStatus.GAME_OVER; // no winner, just close
+            return;
+        }
+
+        this.gameStatus = GameStatus.PLAYER_DISCONNECTED;
+        this.disconnectedPlayerId = playerId;
+    }
+
     public String getWinner() {
+        if (gameStatus == GameStatus.PLAYER_DISCONNECTED) {
+            // The person who DID NOT quit is the winner.
+            return isPlayer1(disconnectedPlayerId) ? player2.getId() : player1.getId();
+        }
+
         if (gameStatus != GameStatus.GAME_OVER) {
             return null;
         }
@@ -132,5 +148,8 @@ public class Game {
     public Player getPlayer2() { return player2; }
     public Board getBoard() { return board; }
     public GameStatus getGameStatus() { return gameStatus; }
+    public String getDisconnectedPlayerId() {
+        return disconnectedPlayerId;
+    }
 }
 

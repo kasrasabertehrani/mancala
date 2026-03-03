@@ -3,8 +3,10 @@ package com.mancalagame.controller;
 import com.mancalagame.model.GameRoom;
 import com.mancalagame.payload.PlayPitCommand;
 import com.mancalagame.service.GameService;
+import com.mancalagame.service.SessionTracker;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
@@ -13,26 +15,29 @@ public class GameController {
 
     private final GameService gameService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final SessionTracker sessionTracker; // Inject our new memory tracker!
 
-    // Spring injects your GameService and the WebSocket broadcaster
-    public GameController(GameService gameService, SimpMessagingTemplate messagingTemplate) {
+    public GameController(GameService gameService, SimpMessagingTemplate messagingTemplate, SessionTracker sessionTracker) {
         this.gameService = gameService;
         this.messagingTemplate = messagingTemplate;
+        this.sessionTracker = sessionTracker;
     }
 
-    // Listens for messages sent to "/app/game.move"
     @MessageMapping("/game.move")
-    public void makeMove(@Payload PlayPitCommand command) {
+    public void makeMove(@Payload PlayPitCommand command, SimpMessageHeaderAccessor headerAccessor) {
 
-        // 1. Tell your awesome GameService to make the move
+        // 1. Memorize this player's session ID in case they disconnect later!
+        String sessionId = headerAccessor.getSessionId();
+        sessionTracker.trackSession(sessionId, command.getPlayerId(), command.getRoomId());
+
+        // 2. Make the move normally
         GameRoom updatedRoom = gameService.makeMove(
                 command.getRoomId(),
                 command.getPlayerId(),
                 command.getPitIndex()
         );
 
-        // 2. Broadcast the fresh game state to EVERYONE sitting in this specific room!
-        // Anyone subscribed to "/topic/room/1" will instantly receive this JSON.
+        // 3. Broadcast the update
         messagingTemplate.convertAndSend("/topic/room/" + updatedRoom.getRoomId(), updatedRoom.getGame());
     }
 }
