@@ -13,6 +13,11 @@ public class RoomService {
     // Our in-memory "database" mapping Room IDs to GameRooms
     private final ConcurrentHashMap<String, GameRoom> activeRooms = new ConcurrentHashMap<>();
     private final AtomicInteger roomCounter = new AtomicInteger(1);
+    private final SessionTracker sessionTracker;
+
+    public RoomService(SessionTracker sessionTracker) {
+        this.sessionTracker = sessionTracker;
+    }
 
     // 1. Create a new room
     public GameRoom createRoom(Player host) {
@@ -44,5 +49,10 @@ public class RoomService {
     // 3. Retrieve a room (used when a player makes a move)
     public GameRoom getRoom(String roomId) {
         return activeRooms.get(roomId);
+    }
+
+    public void removeRoom(String roomId) {
+        activeRooms.remove(roomId);
+        sessionTracker.removeSessionsByRoomId(roomId);
     }
 }
