@@ -4,10 +4,12 @@ import com.mancalagame.model.GameRoom;
 import com.mancalagame.payload.PlayPitCommand;
 import com.mancalagame.service.GameService;
 import com.mancalagame.service.SessionTracker;
+import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.simp.annotation.SendToUser;
 import org.springframework.stereotype.Controller;
 
 @Controller
@@ -15,7 +17,7 @@ public class GameController {
 
     private final GameService gameService;
     private final SimpMessagingTemplate messagingTemplate;
-    private final SessionTracker sessionTracker; // Inject our new memory tracker!
+    private final SessionTracker sessionTracker;
 
     public GameController(GameService gameService, SimpMessagingTemplate messagingTemplate, SessionTracker sessionTracker) {
         this.gameService = gameService;
@@ -26,7 +28,11 @@ public class GameController {
     @MessageMapping("/game.move")
     public void makeMove(@Payload PlayPitCommand command, SimpMessageHeaderAccessor headerAccessor) {
 
-        // 1. Memorize this player's session ID in case they disconnect later!
+        if (command.getRoomId() == null || command.getPlayerId() == null) {
+            throw new IllegalArgumentException("Room ID and Player ID are required.");
+        }
+
+        // 1. Memorize this player's session ID in case they disconnect later
         String sessionId = headerAccessor.getSessionId();
         sessionTracker.trackSession(sessionId, command.getPlayerId(), command.getRoomId());
 
@@ -39,5 +45,11 @@ public class GameController {
 
         // 3. Broadcast the update
         messagingTemplate.convertAndSend("/topic/room/" + updatedRoom.getRoomId(), updatedRoom.getGame());
+    }
+
+    @MessageExceptionHandler
+    @SendToUser("/queue/errors")
+    public String handleException(Exception ex) {
+        return ex.getMessage();
     }
 }

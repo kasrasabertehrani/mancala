@@ -2,6 +2,7 @@ package com.mancalagame.service;
 
 import com.mancalagame.model.Game;
 import com.mancalagame.model.GameRoom;
+import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.Executors;
@@ -20,29 +21,42 @@ public class GameService {
 
     public GameRoom makeMove(String roomId, String playerId, int pitIndex) {
         GameRoom room = roomService.getRoom(roomId);
-        room.getGame().playTurn(playerId, pitIndex);
-
-        if (room.getGame().getGameStatus() == Game.GameStatus.GAME_OVER) {
-            scheduleRoomCleanup(roomId);
+        if (room == null) {
+            throw new IllegalArgumentException("Room not found: " + roomId);
         }
 
-        return room;
+        synchronized (room) {
+            room.getGame().playTurn(playerId, pitIndex);
+
+            if (room.getGame().getGameStatus() == Game.GameStatus.GAME_OVER) {
+                scheduleRoomCleanup(roomId);
+            }
+
+            return room;
+        }
     }
 
     public GameRoom handlePlayerDisconnect(String roomId, String playerId) {
         GameRoom room = roomService.getRoom(roomId);
+        if (room == null) return null;
 
-        if (room != null) {
+        synchronized (room) {
             Game game = room.getGame();
-            if (game.getGameStatus() != Game.GameStatus.GAME_OVER) {
+            if (game.getGameStatus() != Game.GameStatus.GAME_OVER
+                    && game.getGameStatus() != Game.GameStatus.PLAYER_DISCONNECTED) {
                 game.handleDisconnect(playerId);
             }
             scheduleRoomCleanup(roomId);
+            return room;
         }
-        return room;
     }
 
     private void scheduleRoomCleanup(String roomId) {
         scheduler.schedule(() -> roomService.removeRoom(roomId), 5, TimeUnit.SECONDS);
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        scheduler.shutdown();
     }
 }

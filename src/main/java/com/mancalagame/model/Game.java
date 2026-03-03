@@ -116,7 +116,9 @@ public class Game {
 
         boolean isPlayer1 = isPlayer1(playerId);
 
-        if (this.gameStatus == GameStatus.WAITING_FOR_PLAYER_2 || this.gameStatus == GameStatus.GAME_OVER) {
+        if (this.gameStatus == GameStatus.WAITING_FOR_PLAYER_2
+                || this.gameStatus == GameStatus.GAME_OVER
+                || this.gameStatus == GameStatus.PLAYER_DISCONNECTED) {
             throw new IllegalStateException("Game is not in a playable state.");
         }
         if (isPlayer1 && this.gameStatus != GameStatus.PLAYER_1_TURN) {

@@ -23,4 +23,13 @@ public class SessionTracker {
         sessionToPlayer.remove(sessionId);
         sessionToRoom.remove(sessionId);
     }
+
+    public void removeSessionsByRoomId(String roomId) {
+        sessionToRoom.forEach((sessionId, room) -> {
+            if (room.equals(roomId)) {
+                sessionToPlayer.remove(sessionId);
+                sessionToRoom.remove(sessionId);
+            }
+        });
+    }
 }
