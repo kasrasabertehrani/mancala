@@ -2,52 +2,35 @@ package com.mancalagame.service;
 
 import com.mancalagame.model.Game;
 import com.mancalagame.model.GameRoom;
+import com.mancalagame.event.DomainEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class GameService {
 
     private final RoomService roomService;
+    private final ApplicationEventPublisher eventPublisher; // Spring's built-in event bus!
 
-    // gameId -> Instant when a player disconnected
-    private final Map<String, Instant> disconnectTimestamps = new ConcurrentHashMap<>();
-
-    // gameId -> Instant of last move
-    private final Map<String, Instant> lastActivityTimestamps = new ConcurrentHashMap<>();
-
-    private static final Duration RECONNECT_GRACE = Duration.ofSeconds(30);
-    private static final Duration INACTIVITY_TIMEOUT = Duration.ofMinutes(1); // 1 minute for testing
-
-    public GameService(RoomService roomService) {
+    public GameService(RoomService roomService, ApplicationEventPublisher eventPublisher) {
         this.roomService = roomService;
-    }
-
-    public void startActivityTracking(String roomId) {
-        // Only start tracking if not already tracked (avoid resetting on reconnect)
-        lastActivityTimestamps.putIfAbsent(roomId, Instant.now());
+        this.eventPublisher = eventPublisher;
     }
 
     public GameRoom makeMove(String roomId, String playerId, int pitIndex) {
-        GameRoom room = roomService.getRoom(roomId);
-        if (room == null) {
-            throw new IllegalArgumentException("Room not found: " + roomId);
-        }
+        GameRoom room = getRoomOrThrow(roomId);
 
         synchronized (room) {
-            room.getGame().playTurn(playerId, pitIndex);
-            lastActivityTimestamps.put(roomId, Instant.now());
+            room.makeMove(playerId, pitIndex); // The Domain handles the logic and timers
+            publishEvents(room);               // Grab the events and fire them off!
 
             if (room.getGame().getGameStatus() == Game.GameStatus.GAME_OVER) {
-                cleanupTimestamps(roomId);
+                roomService.removeRoom(roomId);
             }
-
             return room;
         }
     }
@@ -57,80 +40,72 @@ public class GameService {
         if (room == null) return null;
 
         synchronized (room) {
-            Game game = room.getGame();
-            if (game.getGameStatus() != Game.GameStatus.GAME_OVER
-                    && game.getGameStatus() != Game.GameStatus.PLAYER_DISCONNECTED) {
-                game.handleDisconnect(playerId);
-                disconnectTimestamps.put(roomId, Instant.now());
-            }
+            room.handleDisconnect(playerId);
+            publishEvents(room);
             return room;
         }
     }
 
-    public GameRoom handlePlayerReconnect(String roomId, String playerId) {
+    public GameRoom handlePlayerReconnect(String roomId, String playerId, String sessionId) {
         GameRoom room = roomService.getRoom(roomId);
         if (room == null) return null;
 
         synchronized (room) {
-            Game game = room.getGame();
-            game.handleReconnect(playerId);
-            disconnectTimestamps.remove(roomId);
-            lastActivityTimestamps.put(roomId, Instant.now());
+            room.handleReconnect(playerId, sessionId);
+            publishEvents(room);
             return room;
         }
     }
 
     /**
-     * Returns list of rooms that timed out (reconnect or inactivity).
-     * The caller is responsible for broadcasting.
+     * Called by the Scheduler. Asks every room to check its own timers.
      */
     public List<GameRoom> processTimeouts() {
         Instant now = Instant.now();
         List<GameRoom> timedOutRooms = new ArrayList<>();
 
-        // 1. Reconnect grace period expired
-        new ArrayList<>(disconnectTimestamps.keySet()).forEach(roomId -> {
-            Instant disconnectedAt = disconnectTimestamps.get(roomId);
-            if (disconnectedAt != null && Duration.between(disconnectedAt, now).compareTo(RECONNECT_GRACE) > 0) {
-                GameRoom room = roomService.getRoom(roomId);
-                if (room != null && room.getGame().getGameStatus() == Game.GameStatus.PAUSED_FOR_RECONNECT) {
-                    synchronized (room) {
-                        room.getGame().forfeit(room.getGame().getDisconnectedPlayerId());
-                        timedOutRooms.add(room);
-                    }
-                    cleanupTimestamps(roomId);
-                    roomService.removeRoom(roomId);
+        for (GameRoom room : roomService.getAllRooms()) {
+            synchronized (room) {
+                if (room.hasReconnectTimedOut(now)) {
+                    room.forceForfeit(room.getGame().getDisconnectedPlayerId(), "Disconnect grace period expired.");
+                    publishEvents(room);
+                    timedOutRooms.add(room);
+                    roomService.removeRoom(room.getRoomId());
                 }
-            }
-        });
+                else if (room.hasInactivityTimedOut(now)) {
+                    // Find out whose turn it was so we can penalize them
+                    String idlePlayerId = (room.getGame().getGameStatus() == Game.GameStatus.PLAYER_1_TURN)
+                            ? room.getGame().getPlayer1().getId()
+                            : room.getGame().getPlayer2().getId();
 
-        // 2. Inactivity timeout
-        new ArrayList<>(lastActivityTimestamps.keySet()).forEach(roomId -> {
-            Instant lastMove = lastActivityTimestamps.get(roomId);
-            if (lastMove != null && Duration.between(lastMove, now).compareTo(INACTIVITY_TIMEOUT) > 0) {
-                GameRoom room = roomService.getRoom(roomId);
-                if (room != null
-                        && room.getGame().getGameStatus() != Game.GameStatus.GAME_OVER
-                        && room.getGame().getGameStatus() != Game.GameStatus.PLAYER_DISCONNECTED
-                        && room.getGame().getGameStatus() != Game.GameStatus.PAUSED_FOR_RECONNECT) {
-                    synchronized (room) {
-                        String idlePlayer = (room.getGame().getGameStatus() == Game.GameStatus.PLAYER_1_TURN)
-                                ? room.getGame().getPlayer1().getId()
-                                : room.getGame().getPlayer2().getId();
-                        room.getGame().forfeit(idlePlayer);
-                        timedOutRooms.add(room);
-                    }
-                    cleanupTimestamps(roomId);
-                    roomService.removeRoom(roomId);
+                    room.forceForfeit(idlePlayerId, "Inactivity timeout.");
+                    publishEvents(room);
+                    timedOutRooms.add(room);
+                    roomService.removeRoom(room.getRoomId());
                 }
             }
-        });
+        }
 
         return timedOutRooms;
     }
 
-    private void cleanupTimestamps(String roomId) {
-        disconnectTimestamps.remove(roomId);
-        lastActivityTimestamps.remove(roomId);
+    // --- HELPER METHODS ---
+
+    private GameRoom getRoomOrThrow(String roomId) {
+        GameRoom room = roomService.getRoom(roomId);
+        if (room == null) {
+            throw new IllegalArgumentException("Room not found: " + roomId);
+        }
+        return room;
+    }
+
+    private void publishEvents(GameRoom room) {
+        // Pull all the uncommitted events out of the room's outbox
+        List<DomainEvent> events = room.getUncommittedEvents();
+
+        // Shout them out to the rest of the Spring application!
+        for (DomainEvent event : events) {
+            eventPublisher.publishEvent(event);
+        }
     }
 }

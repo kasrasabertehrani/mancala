@@ -1,6 +1,5 @@
 package com.mancalagame.controller;
 
-import com.mancalagame.model.GameRoom;
 import com.mancalagame.payload.PlayPitCommand;
 import com.mancalagame.payload.ReconnectRequest;
 import com.mancalagame.service.GameService;
@@ -9,7 +8,6 @@ import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.annotation.SendToUser;
 import org.springframework.stereotype.Controller;
 
@@ -17,58 +15,46 @@ import org.springframework.stereotype.Controller;
 public class GameController {
 
     private final GameService gameService;
-    private final SimpMessagingTemplate messagingTemplate;
     private final SessionTracker sessionTracker;
 
-    public GameController(GameService gameService, SimpMessagingTemplate messagingTemplate, SessionTracker sessionTracker) {
+    public GameController(GameService gameService, SessionTracker sessionTracker) {
         this.gameService = gameService;
-        this.messagingTemplate = messagingTemplate;
         this.sessionTracker = sessionTracker;
     }
 
     @MessageMapping("/game.join")
     public void joinGame(@Payload ReconnectRequest request, SimpMessageHeaderAccessor headerAccessor) {
-        // Track this player's session so we can detect disconnects
+        // Track this player's session in the Infrastructure layer so we can detect network drops
         sessionTracker.trackSession(headerAccessor.getSessionId(), request.getPlayerId(), request.getRoomId());
 
-        // Start activity tracking for this room
-        gameService.startActivityTracking(request.getRoomId());
+        // Notice: We deleted startActivityTracking() because the GameRoom handles it automatically now!
     }
 
     @MessageMapping("/game.move")
     public void makeMove(@Payload PlayPitCommand command, SimpMessageHeaderAccessor headerAccessor) {
-
         if (command.getRoomId() == null || command.getPlayerId() == null) {
             throw new IllegalArgumentException("Room ID and Player ID are required.");
         }
 
-        // 1. Memorize this player's session ID in case they disconnect later
-        String sessionId = headerAccessor.getSessionId();
-        sessionTracker.trackSession(sessionId, command.getPlayerId(), command.getRoomId());
+        // 1. Memorize this player's session ID (acts as a safety net)
+        sessionTracker.trackSession(headerAccessor.getSessionId(), command.getPlayerId(), command.getRoomId());
 
-        // 2. Make the move normally
-        GameRoom updatedRoom = gameService.makeMove(
-                command.getRoomId(),
-                command.getPlayerId(),
-                command.getPitIndex()
-        );
-
-        // 3. Broadcast the update
-        messagingTemplate.convertAndSend("/topic/room/" + updatedRoom.getRoomId(), updatedRoom.getGame());
+        // 2. Tell the Service to make the move.
+        // Notice: We deleted the manual broadcast!
+        // The GameService will generate a MoveMadeEvent, and our GameEventBroadcaster will catch it.
+        gameService.makeMove(command.getRoomId(), command.getPlayerId(), command.getPitIndex());
     }
 
     @MessageMapping("/game.reconnect")
     public void reconnect(@Payload ReconnectRequest request, SimpMessageHeaderAccessor headerAccessor) {
-        // 1. Re-register their brand new WebSocket session in our memory using their secret ID
-        sessionTracker.trackSession(headerAccessor.getSessionId(), request.getPlayerId(), request.getRoomId());
+        String sessionId = headerAccessor.getSessionId();
 
-        // 2. Tell the Service to stop the forfeit timer and resume the game!
-        GameRoom updatedRoom = gameService.handlePlayerReconnect(request.getRoomId(), request.getPlayerId());
+        // 1. Re-register their brand new WebSocket session in our memory
+        sessionTracker.trackSession(sessionId, request.getPlayerId(), request.getRoomId());
 
-        // 3. Broadcast the resumed game state to both players
-        if (updatedRoom != null) {
-            messagingTemplate.convertAndSend("/topic/room/" + updatedRoom.getRoomId(), updatedRoom.getGame());
-        }
+        // 2. Tell the Domain to stop the forfeit timer and update its internal session mapping.
+        // The GameEventBroadcaster will automatically catch the PlayerReconnectedEvent!
+        gameService.handlePlayerReconnect(request.getRoomId(), request.getPlayerId(), sessionId);
     }
 
     @MessageExceptionHandler

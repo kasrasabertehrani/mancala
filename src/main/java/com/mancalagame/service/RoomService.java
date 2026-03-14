@@ -4,6 +4,7 @@ import com.mancalagame.model.GameRoom;
 import com.mancalagame.model.Player;
 import org.springframework.stereotype.Service;
 
+import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -21,13 +22,13 @@ public class RoomService {
 
     // 1. Create a new room
     public GameRoom createRoom(Player host) {
-
-        // Grab the current number and increment it for the next person
         String simpleRoomId = String.valueOf(roomCounter.getAndIncrement());
 
-        GameRoom newRoom = new GameRoom(simpleRoomId, host);
-        activeRooms.put(simpleRoomId, newRoom);
+        // We pass 'null' for the Session ID because this is an HTTP REST call.
+        // The player doesn't have a WebSocket session ID until they actually connect!
+        GameRoom newRoom = new GameRoom(simpleRoomId, host, null);
 
+        activeRooms.put(simpleRoomId, newRoom);
         return newRoom;
     }
 
@@ -38,19 +39,27 @@ public class RoomService {
         if (room == null) {
             throw new IllegalArgumentException("Room not found: " + roomId);
         }
-        if (room.getGame().getPlayer2() != null) {
-            throw new IllegalStateException("Room is already full.");
+
+        // DDD MAGIC: We tell the Room to add the player. We don't touch the Game directly!
+        // We synchronize it just in case Player 1 is making a move at this exact millisecond.
+        synchronized (room) {
+            room.addPlayer(player2, null); // Pass null for session ID until WebSocket connects
         }
 
-        room.getGame().setPlayer2(player2);
         return room;
     }
 
-    // 3. Retrieve a room (used when a player makes a move)
+    // 3. Retrieve a single room
     public GameRoom getRoom(String roomId) {
         return activeRooms.get(roomId);
     }
 
+    // --- 4. NEW: Retrieve all rooms (Used by the GameService Scheduler) ---
+    public Collection<GameRoom> getAllRooms() {
+        return activeRooms.values();
+    }
+
+    // 5. Cleanup
     public void removeRoom(String roomId) {
         activeRooms.remove(roomId);
         sessionTracker.removeSessionsByRoomId(roomId);
