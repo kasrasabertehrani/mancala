@@ -56,6 +56,7 @@ async function reconnectToGame(roomId, playerId, pNum) {
     }
 }
 
+
 // --- 3. REST API CALLS (Lobby Phase) ---
 
 document.getElementById('btn-create').addEventListener('click', async () => {
@@ -69,8 +70,13 @@ document.getElementById('btn-create').addEventListener('click', async () => {
     });
 
     const room = await response.json();
-    // Pass the initial room.game state!
-    joinWebSocket(room.roomId, room.game.player1.id, 1, room.game);
+
+    // NEW DDD FIX: Since you just created the room, you are the ONLY player in the map.
+    // We can just grab the very first key from the players dictionary!
+    const myPlayerId = Object.keys(room.players)[0];
+
+    // Pass the initial room.game state and your new ID
+    joinWebSocket(room.roomId, myPlayerId, 1, room.game);
 });
 
 document.getElementById('btn-join').addEventListener('click', async () => {
@@ -86,8 +92,19 @@ document.getElementById('btn-join').addEventListener('click', async () => {
 
     if (!response.ok) return alert("Room full or not found!");
     const room = await response.json();
-    // Pass the initial room.game state!
-    joinWebSocket(room.roomId, room.game.player2.id, 2, room.game);
+
+    // NEW DDD FIX: The room now has TWO players in the dictionary.
+    // We need to find the ID of the player whose name matches what we just typed.
+    let myPlayerId = null;
+    for (const id in room.players) {
+        if (room.players[id].name === playerName) {
+            myPlayerId = id;
+            break;
+        }
+    }
+
+    // Pass the initial room.game state and your found ID
+    joinWebSocket(room.roomId, myPlayerId, 2, room.game);
 });
 
 // --- 4. WEBSOCKETS (Gameplay Phase) ---
