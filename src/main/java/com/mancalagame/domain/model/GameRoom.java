@@ -36,15 +36,24 @@ public class GameRoom {
 
         this.lastActivityTime = Instant.now();
 
+        // Add player to the room
         this.players.put(playerOne.getId(), playerOne);
-        this.playerSessions.put(playerOne.getId(), playerOneSessionId);
+
+        // Only add the session if we actually have one from the network layer!
+        if (playerOneSessionId != null) {
+            this.playerSessions.put(playerOne.getId(), playerOneSessionId);
+        }
     }
 
     public void addPlayer(Player playerTwo, String sessionId) {
         if (players.size() >= 2) throw new IllegalStateException("Room is full");
 
         players.put(playerTwo.getId(), playerTwo);
-        playerSessions.put(playerTwo.getId(), sessionId);
+
+        // Protect the ConcurrentHashMap from a null session ID!
+        if (sessionId != null) {
+            playerSessions.put(playerTwo.getId(), sessionId);
+        }
         game.setPlayer2(playerTwo);
 
         recordActivity();
