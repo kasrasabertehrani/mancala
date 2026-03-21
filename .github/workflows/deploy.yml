@@ -1,9 +1,18 @@
+name: Deploy
+
 on:
   pull_request:
     branches: [master]
   push:
     branches: [master]
   workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE_NAME: mancala
 
 jobs:
   ci:
@@ -18,8 +27,37 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Build & test
+      - name: Run Maven tests
         run: mvn clean verify
 
-      - name: Build Docker (check)
+      - name: Verify Docker image builds
         run: docker build .
+
+  build:
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+      sha_tag: ${{ steps.meta.outputs.sha_tag }}
+      latest_tag: ${{ steps.meta.outputs.latest_tag }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare image tags
+        id: meta
+        run: |
+          IMAGE="ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}"
+          SHA_TAG="${{ github.sha }}"
+          LATEST_TAG="latest"
+  
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+          echo "sha_tag=$SHA_TAG" >> "$GITHUB_OUTPUT"
+          echo "latest_tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.sha_tag }} \
+            -t ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.latest_tag }} \
