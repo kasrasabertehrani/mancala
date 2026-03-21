@@ -33,31 +33,25 @@ jobs:
       - name: Verify Docker image builds
         run: docker build .
 
-  build:
-    needs: ci
+  publish:
     runs-on: ubuntu-latest
+    needs: ci
     if: github.event_name != 'pull_request'
-    outputs:
-      image: ${{ steps.meta.outputs.image }}
-      sha_tag: ${{ steps.meta.outputs.sha_tag }}
-      latest_tag: ${{ steps.meta.outputs.latest_tag }}
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Prepare image tags
-        id: meta
-        run: |
-          IMAGE="ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}"
-          SHA_TAG="${{ github.sha }}"
-          LATEST_TAG="latest"
-  
-          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
-          echo "sha_tag=$SHA_TAG" >> "$GITHUB_OUTPUT"
-          echo "latest_tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Build Docker image
         run: |
           docker build \
-            -t ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.sha_tag }} \
-            -t ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.latest_tag }} \
+            -t ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            -t ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest \
+            .
+
+      - name: Push Docker image
+        run: |
+          docker push ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
