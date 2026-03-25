@@ -94,3 +94,4 @@ jobs:
 
             docker ps
             echo "Deploy finished"
+            docker image prune -f
