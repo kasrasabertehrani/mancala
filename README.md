@@ -19,10 +19,14 @@ You can play the game right now on our live production server, or run it locally
 
 
 ##  Architecture & Design Patterns
-This project utilizes **Domain-Driven Design (DDD)** and **Hexagonal Architecture (Ports and Adapters)** principles:
-* **Rich Domain Models:** Core entities like `GameRoom`, `Player`, and `Board` encapsulate all business logic and rule validation independently of the Spring framework.
-* **Thread-Safety:** Concurrency is managed via `ConcurrentHashMap` and strict null-safety checks to prevent race conditions during rapid HTTP/WebSocket handshakes.
-* **Event-Driven Flow:** The core domain communicates with the outer WebSocket adapters via pure Domain Events (e.g., `PlayerJoinedEvent`, `PlayerDisconnectedEvent`), completely decoupling REST controllers from the messaging infrastructure.
+
+This project is built on the combined principles of **Domain-Driven Design (DDD)** and **Hexagonal Architecture (Ports and Adapters)**. 
+
+The primary goal of this architecture is to treat the core rules of Mancala as the untouchable "heart" of the application, strictly isolating the business logic from the complexities of the network, database, or user interface.
+
+* **Domain-Driven Design (The Core):** The pure rules of the game are completely encapsulated within the domain. The domain dictates exactly how Mancala is played and validates every move, but it is intentionally "blind" to the outside world. It knows absolutely nothing about WebSockets, HTTP requests, or whether the game is being played on a web browser or a mobile app. 
+* **Hexagonal Architecture (The Adapters):** The Spring Boot controllers and WebSocket handlers act as protective boundary layers (Adapters) around the core domain. They translate messy external network traffic into pure commands the domain understands, and they listen for internal domain events to translate back out to the network. 
+
 
 ##  Continuous Integration & Deployment (CI/CD)
 The project utilizes a fully automated, 3-stage CI/CD pipeline built with **GitHub Actions**. It triggers automatically on pushes and pull requests to the `master` branch.
