@@ -1,4 +1,4 @@
-name: Deploy
+name: CI/CD
 
 on:
   pull_request:
@@ -7,16 +7,14 @@ on:
     branches: [master]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  packages: write
-
 env:
   IMAGE_NAME: mancala
 
 jobs:
   ci:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -26,17 +24,24 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+          cache: maven
+
+      - name: Make mvnw executable
+        run: chmod +x mvnw
 
       - name: Run Maven tests
-        run: mvn clean verify
+        run: ./mvnw clean verify
 
       - name: Verify Docker image builds
-        run: docker build .
+        run: docker build -t mancala:test .
 
   publish:
     runs-on: ubuntu-latest
     needs: ci
     if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - uses: actions/checkout@v4
@@ -61,6 +66,8 @@ jobs:
     needs: publish
     if: github.event_name != 'pull_request'
     environment: production
+    permissions:
+      contents: read
 
     steps:
       - name: Deploy over SSH
@@ -71,9 +78,10 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           username: ${{ secrets.SERVER_USER }}
           script: |
+            set -e
             echo "Start deploy"
 
-            docker pull ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
+            docker pull ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
             docker stop mancala || true
             docker rm mancala || true
@@ -82,6 +90,7 @@ jobs:
               --name mancala \
               --restart always \
               -p 8080:8080 \
-              ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
+              ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
+            docker ps
             echo "Deploy finished"
