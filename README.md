@@ -38,6 +38,12 @@ Checkout [Mancala Rules](https://www.scholastic.com/content/dam/teachers/blogs/a
 ![Animation](https://github.com/user-attachments/assets/eb1c4f97-71a5-4f98-a144-4dad93e69bd0)
 
 
-##  Architecture & Design Patterns
-This project utilizes **Domain-Driven Design** and **Hexagonal Architecture** principles:
-- **Rich Domain Models:** Core entities such as `GameRoom`, `Player`, and `Board` encapsulate all business logic and rule validation independently of the Spring Framework.
+## Architecture & Design Patterns
+
+This project is built on the combined principles of **Domain-Driven Design (DDD)** and **Hexagonal Architecture (Ports and Adapters)**. 
+
+The primary goal of this architecture is to treat the core rules of Mancala as the untouchable "heart" of the application, strictly isolating the business logic from the complexities of the network, database, or user interface.
+
+* **Domain-Driven Design (The Core):** The pure rules of the game are completely encapsulated within the domain. The domain dictates exactly how Mancala is played and validates every move, but it is intentionally "blind" to the outside world. It knows absolutely nothing about WebSockets, HTTP requests, or whether the game is being played on a web browser or a mobile app. 
+* **Hexagonal Architecture (The Adapters):** The Spring Boot controllers and WebSocket handlers act as protective boundary layers (Adapters) around the core domain. They translate messy external network traffic into pure commands the domain understands, and they listen for internal domain events to translate back out to the network. 
+
