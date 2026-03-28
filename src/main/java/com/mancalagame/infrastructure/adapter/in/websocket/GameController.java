@@ -22,13 +22,6 @@ public class GameController {
         this.sessionTracker = sessionTracker;
     }
 
-    @MessageMapping("/game.join")
-    public void joinGame(@Payload ReconnectRequest request, SimpMessageHeaderAccessor headerAccessor) {
-        // Track this player's session in the Infrastructure layer so we can detect network drops
-        sessionTracker.trackSession(headerAccessor.getSessionId(), request.getPlayerId(), request.getRoomId());
-
-        // Notice: We deleted startActivityTracking() because the GameRoom handles it automatically now!
-    }
 
     @MessageMapping("/game.move")
     public void makeMove(@Payload PlayPitCommand command, SimpMessageHeaderAccessor headerAccessor) {

@@ -15,11 +15,9 @@ import org.springframework.messaging.simp.SimpMessagingTemplate; // <-- Import t
 public class RoomController {
 
     private final RoomService roomService;
-    private final SimpMessagingTemplate messagingTemplate; // <-- Add this
 
-    public RoomController(RoomService roomService, SimpMessagingTemplate messagingTemplate) {
+    public RoomController(RoomService roomService) {
         this.roomService = roomService;
-        this.messagingTemplate = messagingTemplate;
     }
 
     // 1. POST /api/rooms/create
@@ -35,25 +33,20 @@ public class RoomController {
         return ResponseEntity.ok(newRoom);
     }
 
-    // 2. POST /api/rooms/join
+    // In RoomController.java
     @PostMapping("/join")
-    public ResponseEntity<GameRoom> joinRoom(@RequestBody JoinRoomRequest request) {
-        // Create the second player
-        Player player2 = new Player(request.getPlayerName());
-
-        // Attempt to join the room
-        GameRoom room = roomService.joinRoom(request.getRoomId(), player2);
-
-        // If the room doesn't exist, or is already full, return a 400 Bad Request
-        if (room == null || room.getGame().getPlayer2() == null) {
-            return ResponseEntity.badRequest().build();
+    public ResponseEntity<?> joinRoom(@RequestBody JoinRoomRequest request) {
+        try {
+            Player player2 = new Player(request.getPlayerName());
+            GameRoom room = roomService.joinRoom(request.getRoomId(), player2);
+            return ResponseEntity.ok(room);
+        } catch (IllegalArgumentException e) {
+            // Catches "Room not found" and returns a clean 400 Bad Request
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (IllegalStateException e) {
+            // Catches "Room is full"
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
-
-        
-        // -------------------------
-
-        // Return the successfully started game to the browser
-        return ResponseEntity.ok(room);
     }
 
     // 3. GET /api/rooms/{roomId} - For reconnection
