@@ -1,5 +1,4 @@
 // --- 1. GAME STATE VARIABLES ---
-// We need to remember who we are and what room we are in.
 let myPlayerId = null;
 let currentRoomId = null;
 let stompClient = null;
@@ -7,7 +6,6 @@ let playerNumber = null; // 1 or 2
 let isMyTurn = false;
 
 // --- 2. HTML ELEMENTS ---
-// These are the buttons and screens we want to show/hide or click.
 const lobbyScreen = document.getElementById('lobby-screen');
 const gameScreen = document.getElementById('game-screen');
 const roomDisplay = document.getElementById('room-display');
@@ -18,20 +16,15 @@ window.addEventListener('load', () => {
     const savedSession = localStorage.getItem('mancalaSession');
     const wasInGame = sessionStorage.getItem('wasInGame');
 
-    // Only auto-reconnect if:
-    // 1. We have a saved session AND
-    // 2. We were previously in a game in THIS tab (page refresh, not new tab)
     if (savedSession && wasInGame) {
         const session = JSON.parse(savedSession);
         reconnectToGame(session.roomId, session.playerId, session.playerNumber);
     } else if (savedSession && !wasInGame) {
-        // New tab opened - ask user if they want to continue existing game
         const session = JSON.parse(savedSession);
         const shouldReconnect = confirm(`You have an active game in Room ${session.roomId}. Rejoin?`);
         if (shouldReconnect) {
             reconnectToGame(session.roomId, session.playerId, session.playerNumber);
         } else {
-            // User wants to start fresh - clear the session
             localStorage.removeItem('mancalaSession');
         }
     }
@@ -39,16 +32,12 @@ window.addEventListener('load', () => {
 
 async function reconnectToGame(roomId, playerId, pNum) {
     try {
-        // First check if the room still exists via REST
         const response = await fetch('/api/rooms/' + roomId);
         if (!response.ok) {
-            // Room doesn't exist anymore, clear session
             localStorage.removeItem('mancalaSession');
             return;
         }
-
         const room = await response.json();
-        // Reconnect via WebSocket with saved credentials
         joinWebSocket(roomId, playerId, pNum, room.game);
     } catch (e) {
         console.error('Reconnection failed:', e);
@@ -56,73 +45,90 @@ async function reconnectToGame(roomId, playerId, pNum) {
     }
 }
 
-
 // --- 3. REST API CALLS (Lobby Phase) ---
 
-document.getElementById('btn-create').addEventListener('click', async () => {
+document.getElementById('btn-create').addEventListener('click', async (event) => {
+    event.preventDefault(); // Stop page refresh!
+
     const playerName = document.getElementById('player-name').value;
     if (!playerName) return alert("Please enter a name!");
 
-    const response = await fetch('/api/rooms/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerName: playerName })
-    });
+    const btn = document.getElementById('btn-create');
+    btn.disabled = true;
+    btn.innerText = "Creating...";
 
-    const room = await response.json();
+    try {
+        const response = await fetch('/api/rooms/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ playerName: playerName })
+        });
 
-    // NEW DDD FIX: Since you just created the room, you are the ONLY player in the map.
-    // We can just grab the very first key from the players dictionary!
-    const myPlayerId = Object.keys(room.players)[0];
+        const room = await response.json();
 
-    // Pass the initial room.game state and your new ID
-    joinWebSocket(room.roomId, myPlayerId, 1, room.game);
+        // Grab ID directly from the game object
+        const fetchedPlayerId = room.game.player1.id;
+        joinWebSocket(room.roomId, fetchedPlayerId, 1, room.game);
+
+    } catch (error) {
+        alert("Failed to connect to the server.");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Create Room";
+    }
 });
 
-document.getElementById('btn-join').addEventListener('click', async () => {
+document.getElementById('btn-join').addEventListener('click', async (event) => {
+    event.preventDefault(); // Stop page refresh!
+
     const playerName = document.getElementById('player-name').value;
     const roomId = document.getElementById('room-id-input').value;
     if (!playerName || !roomId) return alert("Please enter a name and room ID!");
 
-    const response = await fetch('/api/rooms/join', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId: roomId, playerName: playerName })
-    });
+    const btn = document.getElementById('btn-join');
+    btn.disabled = true;
+    btn.innerText = "Joining...";
 
-    if (!response.ok) return alert("Room full or not found!");
-    const room = await response.json();
+    try {
+        const response = await fetch('/api/rooms/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ roomId: roomId, playerName: playerName })
+        });
 
-    // NEW DDD FIX: The room now has TWO players in the dictionary.
-    // We need to find the ID of the player whose name matches what we just typed.
-    let myPlayerId = null;
-    for (const id in room.players) {
-        if (room.players[id].name === playerName) {
-            myPlayerId = id;
-            break;
+        // Read the exact error from Spring Boot
+        if (!response.ok) {
+            const errorMessage = await response.text();
+            alert("Cannot join: " + errorMessage);
+            return;
         }
-    }
 
-    // Pass the initial room.game state and your found ID
-    joinWebSocket(room.roomId, myPlayerId, 2, room.game);
+        const room = await response.json();
+
+        // Grab ID directly from the game object
+        const fetchedPlayerId = room.game.player2.id;
+        joinWebSocket(room.roomId, fetchedPlayerId, 2, room.game);
+
+    } catch (error) {
+        alert("Failed to connect to the server.");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Join Room";
+    }
 });
 
 // --- 4. WEBSOCKETS (Gameplay Phase) ---
 
-// Add initialGameState as the 4th parameter
 function joinWebSocket(roomId, playerId, pNum, initialGameState) {
     myPlayerId = playerId;
     currentRoomId = roomId;
     playerNumber = pNum;
 
-    // Save session for reconnection after page refresh
     localStorage.setItem('mancalaSession', JSON.stringify({
         roomId: roomId,
         playerId: playerId,
         playerNumber: pNum
     }));
-
-    // Mark this tab as being in a game (survives refresh, but not new tab)
     sessionStorage.setItem('wasInGame', 'true');
 
     const socket = new SockJS('/mancala-ws');
@@ -135,40 +141,31 @@ function joinWebSocket(roomId, playerId, pNum, initialGameState) {
         roomDisplay.innerText = "Room: " + roomId;
         highlightMyPits();
 
-        // SUBSCRIBE FIRST, then update board
         stompClient.subscribe('/topic/room/' + roomId, (message) => {
             const gameData = JSON.parse(message.body);
             updateBoard(gameData);
         });
 
-        // --- ADD THIS LINE ---
-        // Shout to the GameController that we are back!
-        // (If it's our first time joining, the server just ignores this, which is perfect)
         stompClient.send('/app/game.reconnect', {}, JSON.stringify({
             roomId: currentRoomId,
             playerId: myPlayerId
         }));
 
-        // THEN draw the board with initial state
         updateBoard(initialGameState);
     });
 }
+
 // --- 5. MAKING A MOVE ---
 
-// Add a click listener to every single pit on the board
 document.querySelectorAll('.pit').forEach(pitElement => {
     pitElement.addEventListener('click', (event) => {
-        // Prevent clicking if not your turn
         if (!isMyTurn) return;
 
-        // Get the number from the pit's HTML id (e.g., "pit-4" -> 4)
         const pitIndex = parseInt(event.target.id.split('-')[1]);
 
-        // Validate: Player 1 can only click pits 0-5, Player 2 can only click pits 7-12
         if (playerNumber === 1 && (pitIndex < 0 || pitIndex > 5)) return;
         if (playerNumber === 2 && (pitIndex < 7 || pitIndex > 12)) return;
 
-        // Send the PlayPitCommand to your Spring Boot GameController
         const command = {
             roomId: currentRoomId,
             playerId: myPlayerId,
@@ -179,8 +176,8 @@ document.querySelectorAll('.pit').forEach(pitElement => {
 });
 
 // --- 6. HIGHLIGHT MY PITS ---
+
 function highlightMyPits() {
-    // Add CSS class to player's own pits
     if (playerNumber === 1) {
         document.querySelectorAll('.player1-row .pit').forEach(p => p.classList.add('my-pit'));
         document.querySelectorAll('.player2-row .pit').forEach(p => p.classList.add('opponent-pit'));
@@ -193,20 +190,16 @@ function highlightMyPits() {
 // --- 7. UPDATING THE SCREEN ---
 
 function updateBoard(gameData) {
-    // 1. Update the stones in all 14 pits
     const pits = gameData.board.pits;
     for (let i = 0; i < 14; i++) {
         document.getElementById('pit-' + i).innerText = pits[i].stones;
     }
 
-    // 2. Determine if it's my turn
     isMyTurn = (gameData.gameStatus === 'PLAYER_1_TURN' && playerNumber === 1) ||
-               (gameData.gameStatus === 'PLAYER_2_TURN' && playerNumber === 2);
+        (gameData.gameStatus === 'PLAYER_2_TURN' && playerNumber === 2);
 
-    // 3. Update pit clickability based on turn
     updatePitStates();
 
-    // 4. Update the status text
     if (gameData.gameStatus === 'WAITING_FOR_PLAYER_2') {
         statusDisplay.innerText = "Waiting for an opponent to join...";
     } else if (gameData.gameStatus === 'PLAYER_1_TURN') {
@@ -215,7 +208,7 @@ function updateBoard(gameData) {
         statusDisplay.innerText = playerNumber === 2 ? "Your Turn! 🎯" : "Opponent's Turn...";
     } else if (gameData.gameStatus === 'PAUSED_FOR_RECONNECT') {
         statusDisplay.innerText = "Opponent lost connection! Pausing for 30 seconds...";
-        disableAllPits(); // Freeze the board!
+        disableAllPits();
     } else if (gameData.gameStatus === 'GAME_OVER' || gameData.gameStatus === 'FORFEIT' || gameData.gameStatus === 'PLAYER_DISCONNECTED') {
         if (gameData.winner === 'DRAW') {
             statusDisplay.innerText = "Game Over - It's a Draw!";
@@ -225,7 +218,6 @@ function updateBoard(gameData) {
             statusDisplay.innerText = "Game Over - You Lose 😢";
         }
         disableAllPits();
-        // Clear saved session - game is over
         localStorage.removeItem('mancalaSession');
         sessionStorage.removeItem('wasInGame');
     }
