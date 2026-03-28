@@ -206,7 +206,7 @@ function updateBoard(gameData) {
         statusDisplay.innerText = playerNumber === 1 ? "Your Turn! 🎯" : "Opponent's Turn...";
     } else if (gameData.gameStatus === 'PLAYER_2_TURN') {
         statusDisplay.innerText = playerNumber === 2 ? "Your Turn! 🎯" : "Opponent's Turn...";
-    } else if (gameData.gameStatus === 'PAUSED_FOR_RECONNECT') {
+    } else if (gameData.gameStatus === 'MATCH_SUSPENDED') {
         statusDisplay.innerText = "Opponent lost connection! Pausing for 30 seconds...";
         disableAllPits();
     } else if (gameData.gameStatus === 'GAME_OVER' || gameData.gameStatus === 'FORFEIT' || gameData.gameStatus === 'PLAYER_DISCONNECTED') {
