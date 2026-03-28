@@ -69,10 +69,20 @@ public class GameRoom {
         domainEvents.add(new MoveMadeEvent(roomId, playerId, pitIndex, game.getGameStatus()));
     }
 
-    // --- CONNECTION LIFECYCLE ---
 
-    public void handleDisconnect(String playerId) {
+    // 1. Update the signature to accept the specific session that broke
+    public void handleDisconnect(String playerId, String brokenSessionId) {
         validatePlayer(playerId);
+
+        // --- RACE CONDITION SHIELD ---
+        String currentSession = playerSessions.get(playerId);
+        // If the player is currently sitting here with a DIFFERENT session ID,
+        // ignore this delayed "ghost" disconnect!
+        if (currentSession != null && !currentSession.equals(brokenSessionId)) {
+            return;
+        }
+        // -----------------------------
+
         playerSessions.remove(playerId);
 
         this.disconnectedTime = Instant.now();
@@ -81,15 +91,24 @@ public class GameRoom {
         domainEvents.add(new PlayerDisconnectedEvent(roomId, playerId));
     }
 
-    public void handleReconnect(String playerId, String sessionId) {
+    // Rename from handleReconnect to bindSession
+    public void bindSession(String playerId, String sessionId) {
         validatePlayer(playerId);
-        playerSessions.put(playerId, sessionId);
 
-        this.disconnectedTime = null;
-        game.handleReconnect(playerId); // Tell the Game to resume
+        // Check if they are actually recovering from a dropped connection
+        boolean wasDisconnected = (game.getGameStatus() == Game.GameStatus.PAUSED_FOR_RECONNECT)
+                && playerId.equals(game.getDisconnectedPlayerId());
+
+        // Securely bind the network pipe
+        playerSessions.put(playerId, sessionId);
         recordActivity();
 
-        domainEvents.add(new PlayerReconnectedEvent(roomId, playerId));
+        // ONLY trigger the reconnect logic if they were actually disconnected
+        if (wasDisconnected) {
+            this.disconnectedTime = null;
+            game.handleReconnect(playerId);
+            domainEvents.add(new PlayerReconnectedEvent(roomId, playerId));
+        }
     }
 
     // --- TIMEOUT EVALUATION (Used by Scheduler) ---
