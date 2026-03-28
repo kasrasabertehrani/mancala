@@ -7,15 +7,15 @@ public class Game {
         PLAYER_1_TURN,
         PLAYER_2_TURN,
         GAME_OVER,
-        FORFEIT, // Changed to match the frontend JS
-        PAUSED_FOR_RECONNECT
+        FORFEIT,
+        MATCH_SUSPENDED // <-- Domain Language!
     }
 
     private final Player player1;
     private Player player2;
     private final Board board;
     private GameStatus gameStatus;
-    private String disconnectedPlayerId;
+    private String absentPlayerId; // <-- Domain Language!
     private GameStatus previousStatus;
 
     public Game(Player player1) {
@@ -69,33 +69,35 @@ public class Game {
         }
     }
 
-    public void handleDisconnect(String playerId) {
+    // --- TRANSLATED TO UBIQUITOUS LANGUAGE ---
+
+    public void markPlayerAbsent(String playerId) {
         if (player2 == null) {
             this.gameStatus = GameStatus.GAME_OVER;
             return;
         }
         this.previousStatus = this.gameStatus;
-        this.gameStatus = GameStatus.PAUSED_FOR_RECONNECT;
-        this.disconnectedPlayerId = playerId;
+        this.gameStatus = GameStatus.MATCH_SUSPENDED;
+        this.absentPlayerId = playerId;
     }
 
-    public void handleReconnect(String playerId) {
-        if (gameStatus != GameStatus.PAUSED_FOR_RECONNECT) return;
-        if (!playerId.equals(disconnectedPlayerId)) return;
+    public void markPlayerReturned(String playerId) {
+        if (gameStatus != GameStatus.MATCH_SUSPENDED) return;
+        if (!playerId.equals(absentPlayerId)) return;
 
         this.gameStatus = this.previousStatus;
-        this.disconnectedPlayerId = null;
+        this.absentPlayerId = null;
         this.previousStatus = null;
     }
 
     public void forfeit(String playerId) {
         this.gameStatus = GameStatus.FORFEIT;
-        this.disconnectedPlayerId = playerId;
+        this.absentPlayerId = playerId;
     }
 
     public String getWinner() {
         if (gameStatus == GameStatus.FORFEIT) {
-            return isPlayer1(disconnectedPlayerId) ? player2.getId() : player1.getId();
+            return isPlayer1(absentPlayerId) ? player2.getId() : player1.getId();
         }
         if (gameStatus != GameStatus.GAME_OVER) return null;
 
@@ -117,7 +119,7 @@ public class Game {
         if (this.gameStatus == GameStatus.WAITING_FOR_PLAYER_2
                 || this.gameStatus == GameStatus.GAME_OVER
                 || this.gameStatus == GameStatus.FORFEIT
-                || this.gameStatus == GameStatus.PAUSED_FOR_RECONNECT) {
+                || this.gameStatus == GameStatus.MATCH_SUSPENDED) { // Updated check
             throw new IllegalStateException("Game is not in a playable state.");
         }
         if (isPlayer1 && this.gameStatus != GameStatus.PLAYER_1_TURN) throw new IllegalStateException("Not Player 1's turn!");
@@ -139,5 +141,5 @@ public class Game {
     public Player getPlayer2() { return player2; }
     public Board getBoard() { return board; }
     public GameStatus getGameStatus() { return gameStatus; }
-    public String getDisconnectedPlayerId() { return disconnectedPlayerId; }
+    public String getAbsentPlayerId() { return absentPlayerId; } // Updated getter
 }

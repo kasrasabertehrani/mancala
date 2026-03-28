@@ -51,7 +51,7 @@ public class GameService {
 
         synchronized (room) {
             // Pass the broken session down to the shield
-            room.handleDisconnect(playerId);
+            room.playerLeftTable(playerId);
 
             roomRepository.save(room);
             publishEvents(room);
@@ -63,7 +63,7 @@ public class GameService {
         GameRoom room = getRoomOrThrow(roomId); // Use your helper method!
 
         synchronized (room) {
-            room.resumeGame(playerId);
+            room.playerReturned(playerId);
             roomRepository.save(room);
             publishEvents(room);
             return room;
@@ -80,7 +80,7 @@ public class GameService {
         for (GameRoom room : roomRepository.findAll()) {
             synchronized (room) {
                 if (room.hasReconnectTimedOut(now)) {
-                    room.forceForfeit(room.getGame().getDisconnectedPlayerId(), "Disconnect grace period expired.");
+                    room.forceForfeit(room.getGame().getAbsentPlayerId(), "Disconnect grace period expired.");
                     roomRepository.save(room);
                     publishEvents(room);
                     timedOutRooms.add(room);
