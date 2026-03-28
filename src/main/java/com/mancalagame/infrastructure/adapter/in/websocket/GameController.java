@@ -47,7 +47,7 @@ public class GameController {
 
         // 2. Tell the Domain to stop the forfeit timer and update its internal session mapping.
         // The GameEventBroadcaster will automatically catch the PlayerReconnectedEvent!
-        gameService.handlePlayerReconnect(request.getRoomId(), request.getPlayerId(), sessionId);
+        gameService.handlePlayerReconnect(request.getRoomId(), request.getPlayerId());
     }
 
     @MessageExceptionHandler

@@ -45,13 +45,13 @@ public class GameService {
     }
 
     // UPDATED GameService.java
-    public GameRoom handlePlayerDisconnect(String roomId, String playerId, String brokenSessionId) {
+    public GameRoom handlePlayerDisconnect(String roomId, String playerId) {
         GameRoom room = roomRepository.findById(roomId);
         if (room == null) return null;
 
         synchronized (room) {
             // Pass the broken session down to the shield
-            room.handleDisconnect(playerId, brokenSessionId);
+            room.handleDisconnect(playerId);
 
             roomRepository.save(room);
             publishEvents(room);
@@ -59,11 +59,11 @@ public class GameService {
         }
     }
 
-    public GameRoom handlePlayerReconnect(String roomId, String playerId, String sessionId) {
+    public GameRoom handlePlayerReconnect(String roomId, String playerId) {
         GameRoom room = getRoomOrThrow(roomId); // Use your helper method!
 
         synchronized (room) {
-            room.bindSession(playerId, sessionId);
+            room.resumeGame(playerId);
             roomRepository.save(room);
             publishEvents(room);
             return room;
