@@ -16,7 +16,6 @@ public class GameRoom {
     private final String roomId;
     private final Game game;
     private final Map<String, Player> players;
-    private final Map<String, String> playerSessions;
     private final List<DomainEvent> domainEvents;
 
     private Instant lastActivityTime;
@@ -25,13 +24,12 @@ public class GameRoom {
     private static final Duration INACTIVITY_TIMEOUT = Duration.ofMinutes(5);
     private static final Duration RECONNECT_GRACE_PERIOD = Duration.ofSeconds(30);
 
-    public GameRoom(String roomId, Player playerOne, String playerOneSessionId) {
+    public GameRoom(String roomId, Player playerOne) {
         this.roomId = roomId;
         this.game = new Game(playerOne);
 
         // Thread-safe collections to prevent ConcurrentModificationException
         this.players = new ConcurrentHashMap<>();
-        this.playerSessions = new ConcurrentHashMap<>();
         this.domainEvents = Collections.synchronizedList(new ArrayList<>());
 
         this.lastActivityTime = Instant.now();
@@ -39,21 +37,14 @@ public class GameRoom {
         // Add player to the room
         this.players.put(playerOne.getId(), playerOne);
 
-        // Only add the session if we actually have one from the network layer!
-        if (playerOneSessionId != null) {
-            this.playerSessions.put(playerOne.getId(), playerOneSessionId);
-        }
     }
 
-    public void addPlayer(Player playerTwo, String sessionId) {
+    public void addPlayer(Player playerTwo) {
         if (players.size() >= 2) throw new IllegalStateException("Room is full");
 
         players.put(playerTwo.getId(), playerTwo);
 
-        // Protect the ConcurrentHashMap from a null session ID!
-        if (sessionId != null) {
-            playerSessions.put(playerTwo.getId(), sessionId);
-        }
+
         game.setPlayer2(playerTwo);
 
         recordActivity();
@@ -71,39 +62,21 @@ public class GameRoom {
 
 
     // 1. Update the signature to accept the specific session that broke
-    public void handleDisconnect(String playerId, String brokenSessionId) {
+    public void handleDisconnect(String playerId) {
         validatePlayer(playerId);
-
-        // --- RACE CONDITION SHIELD ---
-        String currentSession = playerSessions.get(playerId);
-        // If the player is currently sitting here with a DIFFERENT session ID,
-        // ignore this delayed "ghost" disconnect!
-        if (currentSession != null && !currentSession.equals(brokenSessionId)) {
-            return;
-        }
-        // -----------------------------
-
-        playerSessions.remove(playerId);
-
         this.disconnectedTime = Instant.now();
-        game.handleDisconnect(playerId); // Tell the Game to pause
-
+        game.handleDisconnect(playerId);
         domainEvents.add(new PlayerDisconnectedEvent(roomId, playerId));
     }
 
-    // Rename from handleReconnect to bindSession
-    public void bindSession(String playerId, String sessionId) {
-        validatePlayer(playerId);
 
-        // Check if they are actually recovering from a dropped connection
+    public void resumeGame(String playerId) {
+        validatePlayer(playerId);
         boolean wasDisconnected = (game.getGameStatus() == Game.GameStatus.PAUSED_FOR_RECONNECT)
                 && playerId.equals(game.getDisconnectedPlayerId());
 
-        // Securely bind the network pipe
-        playerSessions.put(playerId, sessionId);
         recordActivity();
 
-        // ONLY trigger the reconnect logic if they were actually disconnected
         if (wasDisconnected) {
             this.disconnectedTime = null;
             game.handleReconnect(playerId);
@@ -148,6 +121,5 @@ public class GameRoom {
 
     public String getRoomId() { return roomId; }
     public Game getGame() { return game; }
-    public Map<String, String> getPlayerSessions() { return new HashMap<>(playerSessions); }
     public Map<String, Player> getPlayers() { return new HashMap<>(players); }
 }

@@ -27,8 +27,15 @@ public class WebSocketEventListener {
         String roomId = sessionTracker.getRoomId(brokenSessionId);
 
         if (roomId != null && playerId != null) {
+
+            String activeSession = sessionTracker.getActiveSessionForPlayer(playerId);
+            if (activeSession != null && !activeSession.equals(brokenSessionId)) {
+                // It's a ghost disconnect! Ignore it and don't bother the Service.
+                return;
+            }
+
             // Pass the broken session ID down the chain!
-            gameService.handlePlayerDisconnect(roomId, playerId, brokenSessionId);
+            gameService.handlePlayerDisconnect(roomId, playerId);
 
             sessionTracker.removeSession(brokenSessionId);
         }

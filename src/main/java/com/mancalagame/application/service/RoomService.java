@@ -27,7 +27,7 @@ public class RoomService {
     public GameRoom createRoom(Player host) {
         String simpleRoomId = String.valueOf(roomCounter.getAndIncrement());
 
-        GameRoom newRoom = new GameRoom(simpleRoomId, host, null);
+        GameRoom newRoom = new GameRoom(simpleRoomId, host);
 
         // Save it using the Port, not a local Map
         roomRepository.save(newRoom);
@@ -42,7 +42,7 @@ public class RoomService {
         }
 
         synchronized (room) {
-            room.addPlayer(player2, null);
+            room.addPlayer(player2);
 
             // Save the updated state to the Port
             roomRepository.save(room);
