@@ -1,17 +1,17 @@
-// --- 1. GAME STATE VARIABLES ---
 let myPlayerId = null;
 let currentRoomId = null;
 let stompClient = null;
 let playerNumber = null; // 1 or 2
 let isMyTurn = false;
+let activeBoardId = null;
 
-// --- 2. HTML ELEMENTS ---
 const lobbyScreen = document.getElementById('lobby-screen');
 const gameScreen = document.getElementById('game-screen');
 const roomDisplay = document.getElementById('room-display');
 const statusDisplay = document.getElementById('status-display');
 
-// --- 2.5 CHECK FOR SAVED SESSION ON PAGE LOAD ---
+// --- CHECK FOR SAVED SESSION ON PAGE LOAD ---
+
 window.addEventListener('load', () => {
     const savedSession = localStorage.getItem('mancalaSession');
     const wasInGame = sessionStorage.getItem('wasInGame');
@@ -45,10 +45,10 @@ async function reconnectToGame(roomId, playerId, pNum) {
     }
 }
 
-// --- 3. REST API CALLS (Lobby Phase) ---
+// --- REST API CALLS LOBBY ---
 
 document.getElementById('btn-create').addEventListener('click', async (event) => {
-    event.preventDefault(); // Stop page refresh!
+    event.preventDefault();
 
     const playerName = document.getElementById('player-name').value;
     if (!playerName) return alert("Please enter a name!");
@@ -66,7 +66,6 @@ document.getElementById('btn-create').addEventListener('click', async (event) =>
 
         const room = await response.json();
 
-        // Grab ID directly from the game object
         const fetchedPlayerId = room.game.player1.id;
         joinWebSocket(room.roomId, fetchedPlayerId, 1, room.game);
 
@@ -79,7 +78,7 @@ document.getElementById('btn-create').addEventListener('click', async (event) =>
 });
 
 document.getElementById('btn-join').addEventListener('click', async (event) => {
-    event.preventDefault(); // Stop page refresh!
+    event.preventDefault();
 
     const playerName = document.getElementById('player-name').value;
     const roomId = document.getElementById('room-id-input').value;
@@ -96,7 +95,6 @@ document.getElementById('btn-join').addEventListener('click', async (event) => {
             body: JSON.stringify({ roomId: roomId, playerName: playerName })
         });
 
-        // Read the exact error from Spring Boot
         if (!response.ok) {
             const errorMessage = await response.text();
             alert("Cannot join: " + errorMessage);
@@ -105,7 +103,6 @@ document.getElementById('btn-join').addEventListener('click', async (event) => {
 
         const room = await response.json();
 
-        // Grab ID directly from the game object
         const fetchedPlayerId = room.game.player2.id;
         joinWebSocket(room.roomId, fetchedPlayerId, 2, room.game);
 
@@ -117,7 +114,7 @@ document.getElementById('btn-join').addEventListener('click', async (event) => {
     }
 });
 
-// --- 4. WEBSOCKETS (Gameplay Phase) ---
+// --- WEBSOCKET ---
 
 function joinWebSocket(roomId, playerId, pNum, initialGameState) {
     myPlayerId = playerId;
@@ -138,6 +135,8 @@ function joinWebSocket(roomId, playerId, pNum, initialGameState) {
     stompClient.connect({}, () => {
         lobbyScreen.classList.remove('active');
         gameScreen.classList.add('active');
+
+        setActiveBoard();
         roomDisplay.innerText = "Room: " + roomId;
         highlightMyPits();
 
@@ -155,44 +154,95 @@ function joinWebSocket(roomId, playerId, pNum, initialGameState) {
     });
 }
 
-// --- 5. MAKING A MOVE ---
+function setActiveBoard() {
+    const board1 = document.getElementById('board-player1');
+    const board2 = document.getElementById('board-player2');
+    const allBoards = Array.from(document.querySelectorAll('.board-wrapper'));
 
-document.querySelectorAll('.pit').forEach(pitElement => {
-    pitElement.addEventListener('click', (event) => {
-        if (!isMyTurn) return;
+    if (!board1 || !board2) {
+        const fallbackBoard = board1 || board2 || allBoards[0] || null;
+        if (!fallbackBoard) {
+            console.error('Board containers not found: expected #board-player1 and #board-player2');
+            activeBoardId = null;
+            return;
+        }
 
-        const pitIndex = parseInt(event.target.id.split('-')[1]);
+        allBoards.forEach(board => {
+            board.style.display = board === fallbackBoard ? 'block' : 'none';
+        });
 
-        if (playerNumber === 1 && (pitIndex < 0 || pitIndex > 5)) return;
-        if (playerNumber === 2 && (pitIndex < 7 || pitIndex > 12)) return;
+        activeBoardId = fallbackBoard.id || null;
+        console.warn('Using fallback board because expected board ids are missing in DOM.');
+        return;
+    }
 
-        const command = {
-            roomId: currentRoomId,
-            playerId: myPlayerId,
-            pitIndex: pitIndex
-        };
-        stompClient.send('/app/game.move', {}, JSON.stringify(command));
-    });
-});
-
-// --- 6. HIGHLIGHT MY PITS ---
-
-function highlightMyPits() {
     if (playerNumber === 1) {
-        document.querySelectorAll('.player1-row .pit').forEach(p => p.classList.add('my-pit'));
-        document.querySelectorAll('.player2-row .pit').forEach(p => p.classList.add('opponent-pit'));
+        board1.style.display = 'block';
+        board2.style.display = 'none';
+        activeBoardId = 'board-player1';
     } else {
-        document.querySelectorAll('.player2-row .pit').forEach(p => p.classList.add('my-pit'));
-        document.querySelectorAll('.player1-row .pit').forEach(p => p.classList.add('opponent-pit'));
+        board1.style.display = 'none';
+        board2.style.display = 'block';
+        activeBoardId = 'board-player2';
     }
 }
 
-// --- 7. UPDATING THE SCREEN ---
+// --- MAKING A MOVE ---
+
+document.addEventListener('click', (event) => {
+    const pitElement = event.target.closest('.pit');
+    if (!pitElement || !isMyTurn) return;
+
+    const boardWrapper = pitElement.closest('.board-wrapper');
+    if (!boardWrapper || boardWrapper.id !== activeBoardId) return;
+
+    const pitIndex = parseInt(pitElement.dataset.pitIndex, 10);
+
+    if (playerNumber === 1 && (pitIndex < 0 || pitIndex > 5)) return;
+    if (playerNumber === 2 && (pitIndex < 7 || pitIndex > 12)) return;
+
+    stompClient.send('/app/game.move', {}, JSON.stringify({
+        roomId: currentRoomId,
+        playerId: myPlayerId,
+        pitIndex: pitIndex
+    }));
+});
+
+// --- HIGHLIGHT MY PITS ---
+
+function highlightMyPits() {
+    const activeBoard = document.getElementById(activeBoardId);
+    if (!activeBoard) return;
+
+    const myStoreIndex = playerNumber === 1 ? 6 : 13;
+    const opponentStoreIndex = playerNumber === 1 ? 13 : 6;
+
+    activeBoard.querySelectorAll('.pit').forEach(p => {
+        p.classList.remove('my-pit', 'opponent-pit');
+        const idx = parseInt(p.dataset.pitIndex, 10);
+        const isMine = playerNumber === 1 ? (idx >= 0 && idx <= 5) : (idx >= 7 && idx <= 12);
+        p.classList.add(isMine ? 'my-pit' : 'opponent-pit');
+    });
+
+    activeBoard.querySelectorAll('.store').forEach(store => {
+        store.classList.remove('my-store', 'opponent-store');
+        const idx = parseInt(store.dataset.pitIndex, 10);
+        if (idx === myStoreIndex) {
+            store.classList.add('my-store');
+        } else if (idx === opponentStoreIndex) {
+            store.classList.add('opponent-store');
+        }
+    });
+}
+
+// --- UPDATING THE SCREEN ---
 
 function updateBoard(gameData) {
     const pits = gameData.board.pits;
     for (let i = 0; i < 14; i++) {
-        document.getElementById('pit-' + i).innerText = pits[i].stones;
+        document.querySelectorAll(`[data-pit-index="${i}"]`).forEach(el => {
+            el.innerText = pits[i].stones;
+        });
     }
 
     isMyTurn = (gameData.gameStatus === 'PLAYER_1_TURN' && playerNumber === 1) ||
@@ -224,7 +274,10 @@ function updateBoard(gameData) {
 }
 
 function updatePitStates() {
-    document.querySelectorAll('.my-pit').forEach(pit => {
+    const activeBoard = document.getElementById(activeBoardId);
+    if (!activeBoard) return;
+
+    activeBoard.querySelectorAll('.my-pit').forEach(pit => {
         if (isMyTurn) {
             pit.classList.add('active');
             pit.classList.remove('disabled');
@@ -236,7 +289,10 @@ function updatePitStates() {
 }
 
 function disableAllPits() {
-    document.querySelectorAll('.pit').forEach(pit => {
+    const activeBoard = document.getElementById(activeBoardId);
+    if (!activeBoard) return;
+
+    activeBoard.querySelectorAll('.pit').forEach(pit => {
         pit.classList.add('disabled');
         pit.classList.remove('active');
     });
