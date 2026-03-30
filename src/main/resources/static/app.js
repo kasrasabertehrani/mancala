@@ -38,7 +38,8 @@ async function reconnectToGame(roomId, playerId, pNum) {
             return;
         }
         const room = await response.json();
-        joinWebSocket(roomId, playerId, pNum, room.game);
+        // Pass 'true' because this is an actual reconnect!
+        joinWebSocket(roomId, playerId, pNum, room.game, true);
     } catch (e) {
         console.error('Reconnection failed:', e);
         localStorage.removeItem('mancalaSession');
@@ -65,9 +66,10 @@ document.getElementById('btn-create').addEventListener('click', async (event) =>
         });
 
         const room = await response.json();
-
         const fetchedPlayerId = room.game.player1.id;
-        joinWebSocket(room.roomId, fetchedPlayerId, 1, room.game);
+
+        // Pass 'false' because this is a brand new room connection
+        joinWebSocket(room.roomId, fetchedPlayerId, 1, room.game, false);
 
     } catch (error) {
         alert("Failed to connect to the server.");
@@ -102,9 +104,10 @@ document.getElementById('btn-join').addEventListener('click', async (event) => {
         }
 
         const room = await response.json();
-
         const fetchedPlayerId = room.game.player2.id;
-        joinWebSocket(room.roomId, fetchedPlayerId, 2, room.game);
+
+        // Pass 'false' because this is a brand new join connection
+        joinWebSocket(room.roomId, fetchedPlayerId, 2, room.game, false);
 
     } catch (error) {
         alert("Failed to connect to the server.");
@@ -116,7 +119,8 @@ document.getElementById('btn-join').addEventListener('click', async (event) => {
 
 // --- WEBSOCKET ---
 
-function joinWebSocket(roomId, playerId, pNum, initialGameState) {
+// Added isReconnecting as the 5th parameter, defaults to false
+function joinWebSocket(roomId, playerId, pNum, initialGameState, isReconnecting = false) {
     myPlayerId = playerId;
     currentRoomId = roomId;
     playerNumber = pNum;
@@ -130,7 +134,7 @@ function joinWebSocket(roomId, playerId, pNum, initialGameState) {
 
     const socket = new SockJS('/mancala-ws');
     stompClient = Stomp.over(socket);
-    stompClient.debug = null;
+    stompClient.debug = null; // Hides noisy STOMP console logs
 
     stompClient.connect({}, () => {
         lobbyScreen.classList.remove('active');
@@ -145,10 +149,13 @@ function joinWebSocket(roomId, playerId, pNum, initialGameState) {
             updateBoard(gameData);
         });
 
-        stompClient.send('/app/game.reconnect', {}, JSON.stringify({
-            roomId: currentRoomId,
-            playerId: myPlayerId
-        }));
+        // Only shout "reconnect" if the flag is true!
+        if (isReconnecting) {
+            stompClient.send('/app/game.reconnect', {}, JSON.stringify({
+                roomId: currentRoomId,
+                playerId: myPlayerId
+            }));
+        }
 
         updateBoard(initialGameState);
     });
@@ -198,6 +205,7 @@ document.addEventListener('click', (event) => {
 
     const pitIndex = parseInt(pitElement.dataset.pitIndex, 10);
 
+    // Prevent players from clicking the opponent's side
     if (playerNumber === 1 && (pitIndex < 0 || pitIndex > 5)) return;
     if (playerNumber === 2 && (pitIndex < 7 || pitIndex > 12)) return;
 

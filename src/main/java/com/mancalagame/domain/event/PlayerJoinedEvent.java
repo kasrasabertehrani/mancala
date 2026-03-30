@@ -1,13 +1,16 @@
 package com.mancalagame.domain.event;
 
 
-public class PlayerJoinedEvent extends DomainEvent {
-    private final String playerId;
+import com.mancalagame.domain.model.vo.PlayerId;
+import com.mancalagame.domain.model.vo.RoomId;
 
-    public PlayerJoinedEvent(String roomId, String playerId) {
+public class PlayerJoinedEvent extends DomainEvent {
+    private final PlayerId playerId;
+
+    public PlayerJoinedEvent(RoomId roomId, PlayerId playerId) {
         super(roomId);
         this.playerId = playerId;
     }
 
-    public String getPlayerId() { return playerId; }
+    public PlayerId getPlayerId() { return playerId; }
 }

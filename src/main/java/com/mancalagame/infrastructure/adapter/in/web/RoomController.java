@@ -1,5 +1,7 @@
 package com.mancalagame.infrastructure.adapter.in.web;
 
+import com.mancalagame.domain.exception.InvalidGameStateException;
+import com.mancalagame.domain.exception.RoomNotFoundException;
 import com.mancalagame.domain.model.GameRoom;
 import com.mancalagame.domain.model.Player;
 import com.mancalagame.infrastructure.adapter.in.web.payload.CreateRoomRequest;
@@ -40,11 +42,9 @@ public class RoomController {
             Player player2 = new Player(request.getPlayerName());
             GameRoom room = roomService.joinRoom(request.getRoomId(), player2);
             return ResponseEntity.ok(room);
-        } catch (IllegalArgumentException e) {
-            // Catches "Room not found" and returns a clean 400 Bad Request
-            return ResponseEntity.badRequest().body(e.getMessage());
-        } catch (IllegalStateException e) {
-            // Catches "Room is full"
+        } catch (RoomNotFoundException e) {
+            return ResponseEntity.badRequest().body("Room not found: " + e.getRoomId());
+        } catch (InvalidGameStateException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
