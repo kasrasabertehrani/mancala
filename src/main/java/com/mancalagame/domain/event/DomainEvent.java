@@ -1,16 +1,18 @@
 package com.mancalagame.domain.event;
 
+import com.mancalagame.domain.model.vo.RoomId;
+
 import java.time.Instant;
 
 public abstract class DomainEvent {
-    private final String roomId;
+    private final RoomId roomId;
     private final Instant occurredOn;
 
-    public DomainEvent(String roomId) {
+    public DomainEvent(RoomId roomId) {
         this.roomId = roomId;
         this.occurredOn = Instant.now();
     }
 
-    public String getRoomId() { return roomId; }
+    public RoomId getRoomId() { return roomId; }
     public Instant getOccurredOn() { return occurredOn; }
 }

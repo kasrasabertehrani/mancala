@@ -1,5 +1,9 @@
 package com.mancalagame.domain.model;
 
+import com.mancalagame.domain.exception.InvalidGameStateException;
+import com.mancalagame.domain.exception.InvalidPlayerException;
+import com.mancalagame.domain.model.vo.PlayerId;
+
 public class Game {
 
     public enum GameStatus {
@@ -8,14 +12,14 @@ public class Game {
         PLAYER_2_TURN,
         GAME_OVER,
         FORFEIT,
-        MATCH_SUSPENDED // <-- Domain Language!
+        MATCH_SUSPENDED
     }
 
     private final Player player1;
     private Player player2;
     private final Board board;
     private GameStatus gameStatus;
-    private String absentPlayerId; // <-- Domain Language!
+    private PlayerId absentPlayerId; // <-- Using Value Object
     private GameStatus previousStatus;
 
     public Game(Player player1) {
@@ -43,7 +47,7 @@ public class Game {
         board.sweepRemaining(Board.PLAYER_2_PIT_START, Board.PLAYER_2_PIT_END, Board.PLAYER_2_STORE);
     }
 
-    public void playTurn(String playerId, int pitIndex) {
+    public void playTurn(PlayerId playerId, int pitIndex) {
         validateMove(playerId, pitIndex);
 
         boolean isPlayer1 = isPlayer1(playerId);
@@ -69,9 +73,7 @@ public class Game {
         }
     }
 
-    // --- TRANSLATED TO UBIQUITOUS LANGUAGE ---
-
-    public void markPlayerAbsent(String playerId) {
+    public void markPlayerAbsent(PlayerId playerId) {
         if (player2 == null) {
             this.gameStatus = GameStatus.GAME_OVER;
             return;
@@ -81,7 +83,7 @@ public class Game {
         this.absentPlayerId = playerId;
     }
 
-    public void markPlayerReturned(String playerId) {
+    public void markPlayerReturned(PlayerId playerId) {
         if (gameStatus != GameStatus.MATCH_SUSPENDED) return;
         if (!playerId.equals(absentPlayerId)) return;
 
@@ -90,28 +92,30 @@ public class Game {
         this.previousStatus = null;
     }
 
-    public void forfeit(String playerId) {
+    public void forfeit(PlayerId playerId) {
         this.gameStatus = GameStatus.FORFEIT;
         this.absentPlayerId = playerId;
     }
 
+    // We still return String here so "DRAW" works cleanly with your DTOs
     public String getWinner() {
         if (gameStatus == GameStatus.FORFEIT) {
-            return isPlayer1(absentPlayerId) ? player2.getId() : player1.getId();
+            return isPlayer1(absentPlayerId) ? player2.getId().value() : player1.getId().value();
         }
         if (gameStatus != GameStatus.GAME_OVER) return null;
 
         int p1Score = board.getPlayer1Score();
         int p2Score = board.getPlayer2Score();
 
-        if (p1Score > p2Score) return player1.getId();
-        else if (p2Score > p1Score) return player2.getId();
+        if (p1Score > p2Score) return player1.getId().value();
+        else if (p2Score > p1Score) return player2.getId().value();
         else return "DRAW";
     }
 
-    private void validateMove(String playerId, int pitIndex) {
+    private void validateMove(PlayerId playerId, int pitIndex) {
         if (playerId == null || (!isPlayer1(playerId) && (player2 == null || !player2.getId().equals(playerId)))) {
-            throw new IllegalArgumentException("Unknown player.");
+            String idVal = (playerId != null) ? playerId.value() : "null";
+            throw new InvalidPlayerException(idVal, "Unknown player attempted a move.");
         }
 
         boolean isPlayer1 = isPlayer1(playerId);
@@ -119,19 +123,25 @@ public class Game {
         if (this.gameStatus == GameStatus.WAITING_FOR_PLAYER_2
                 || this.gameStatus == GameStatus.GAME_OVER
                 || this.gameStatus == GameStatus.FORFEIT
-                || this.gameStatus == GameStatus.MATCH_SUSPENDED) { // Updated check
-            throw new IllegalStateException("Game is not in a playable state.");
+                || this.gameStatus == GameStatus.MATCH_SUSPENDED) {
+            throw new InvalidGameStateException("Game is not in a playable state.");
         }
-        if (isPlayer1 && this.gameStatus != GameStatus.PLAYER_1_TURN) throw new IllegalStateException("Not Player 1's turn!");
-        if (!isPlayer1 && this.gameStatus != GameStatus.PLAYER_2_TURN) throw new IllegalStateException("Not Player 2's turn!");
+        if (isPlayer1 && this.gameStatus != GameStatus.PLAYER_1_TURN) {
+            throw new InvalidGameStateException("Not Player 1's turn!");
+        }
+        if (!isPlayer1 && this.gameStatus != GameStatus.PLAYER_2_TURN) {
+            throw new InvalidGameStateException("Not Player 2's turn!");
+        }
 
         if (!board.isOnSide(isPlayer1, pitIndex)) {
-            throw new IllegalArgumentException(isPlayer1 ? "Player 1 can only pick pits 0-5." : "Player 2 can only pick pits 7-12.");
+            throw new InvalidGameStateException(isPlayer1 ? "Player 1 can only pick pits 0-5." : "Player 2 can only pick pits 7-12.");
         }
-        if (board.getStonesAt(pitIndex) == 0) throw new IllegalArgumentException("Cannot pick an empty pit.");
+        if (board.getStonesAt(pitIndex) == 0) {
+            throw new InvalidGameStateException("Cannot pick an empty pit.");
+        }
     }
 
-    private boolean isPlayer1(String playerId) {
+    private boolean isPlayer1(PlayerId playerId) {
         return this.player1.getId().equals(playerId);
     }
 
@@ -141,5 +151,5 @@ public class Game {
     public Player getPlayer2() { return player2; }
     public Board getBoard() { return board; }
     public GameStatus getGameStatus() { return gameStatus; }
-    public String getAbsentPlayerId() { return absentPlayerId; } // Updated getter
+    public PlayerId getAbsentPlayerId() { return absentPlayerId; }
 }

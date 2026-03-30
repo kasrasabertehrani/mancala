@@ -3,6 +3,7 @@ package com.mancalagame.infrastructure.adapter.out.event;
 import com.mancalagame.domain.event.DomainEvent;
 import com.mancalagame.domain.model.GameRoom;
 import com.mancalagame.application.port.out.GameRoomRepositoryPort;
+import com.mancalagame.domain.model.vo.RoomId;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
@@ -24,12 +25,15 @@ public class GameEventBroadcaster {
      */
     @EventListener
     public void handleGameEvents(DomainEvent event) {
-        // 1. Find the room where the event happened
-        GameRoom room = roomRepository.findById(event.getRoomId());
+        // 1. Wrap the event's raw String in our safe Value Object
+        RoomId roomId = event.getRoomId();
 
-        if (room != null) {
-            // 2. Broadcast the fresh, updated Game state to everyone in that room
-            messagingTemplate.convertAndSend("/topic/room/" + room.getRoomId(), room.getGame());
-        }
+        // 2. Use .ifPresent() to elegantly handle the Optional return type
+        roomRepository.findById(roomId).ifPresent(room -> {
+
+            // 3. Broadcast the state. Notice we use room.getRoomId().value() for the URL!
+            messagingTemplate.convertAndSend("/topic/room/" + room.getRoomId().value(), room.getGame());
+
+        });
     }
 }

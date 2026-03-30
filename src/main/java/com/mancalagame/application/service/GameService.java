@@ -3,8 +3,12 @@ package com.mancalagame.application.service;
 import com.mancalagame.application.port.out.DomainEventPublisherPort;
 import com.mancalagame.application.port.out.GameRoomRepositoryPort;
 import com.mancalagame.domain.event.DomainEvent;
+import com.mancalagame.domain.exception.InvalidGameStateException;
+import com.mancalagame.domain.exception.RoomNotFoundException;
 import com.mancalagame.domain.model.Game;
 import com.mancalagame.domain.model.GameRoom;
+import com.mancalagame.domain.model.vo.PlayerId;
+import com.mancalagame.domain.model.vo.RoomId;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -14,7 +18,6 @@ import java.util.List;
 @Service
 public class GameService {
 
-    // The Service relies purely on interfaces (Ports), not implementations!
     private final GameRoomRepositoryPort roomRepository;
     private final DomainEventPublisherPort eventPublisher;
 
@@ -23,20 +26,17 @@ public class GameService {
         this.eventPublisher = eventPublisher;
     }
 
-    public GameRoom makeMove(String roomId, String playerId, int pitIndex) {
+    public GameRoom makeMove(String roomIdStr, String playerIdStr, int pitIndex) {
+        RoomId roomId = new RoomId(roomIdStr);
+        PlayerId playerId = new PlayerId(playerIdStr);
+
         GameRoom room = getRoomOrThrow(roomId);
 
         synchronized (room) {
-            // 1. The Domain handles the pure business logic
             room.makeMove(playerId, pitIndex);
-
-            // 2. The Port saves the state (implemented by your Infrastructure Adapter)
             roomRepository.save(room);
-
-            // 3. The Port broadcasts the events
             publishEvents(room);
 
-            // 4. Cleanup if the game naturally ended
             if (room.getGame().getGameStatus() == Game.GameStatus.GAME_OVER) {
                 roomRepository.deleteById(roomId);
             }
@@ -44,35 +44,39 @@ public class GameService {
         }
     }
 
-    // UPDATED GameService.java
-    public GameRoom handlePlayerDisconnect(String roomId, String playerId) {
-        GameRoom room = roomRepository.findById(roomId);
-        if (room == null) return null;
+    public GameRoom handlePlayerDisconnect(String roomIdStr, String playerIdStr) {
+        RoomId roomId = new RoomId(roomIdStr);
+        PlayerId playerId = new PlayerId(playerIdStr);
+
+        // We use map() here to cleanly handle the Optional without a null check
+        return roomRepository.findById(roomId).map(room -> {
+            synchronized (room) {
+                room.playerLeftTable(playerId);
+                roomRepository.save(room);
+                publishEvents(room);
+                return room;
+            }
+        }).orElse(null);
+    }
+
+    public GameRoom handlePlayerReconnect(String roomIdStr, String playerIdStr) {
+        RoomId roomId = new RoomId(roomIdStr);
+        PlayerId playerId = new PlayerId(playerIdStr);
+
+        GameRoom room = getRoomOrThrow(roomId);
 
         synchronized (room) {
-            // Pass the broken session down to the shield
-            room.playerLeftTable(playerId);
-
-            roomRepository.save(room);
-            publishEvents(room);
+            try {
+                room.playerReturned(playerId);
+                roomRepository.save(room);
+                publishEvents(room);
+            } catch (InvalidGameStateException e) {
+                System.out.println("Ignored redundant reconnect: " + e.getMessage());
+            }
             return room;
         }
     }
 
-    public GameRoom handlePlayerReconnect(String roomId, String playerId) {
-        GameRoom room = getRoomOrThrow(roomId); // Use your helper method!
-
-        synchronized (room) {
-            room.playerReturned(playerId);
-            roomRepository.save(room);
-            publishEvents(room);
-            return room;
-        }
-    }
-
-    /**
-     * Called by the Scheduler adapter. Asks every room to check its own timers.
-     */
     public List<GameRoom> processTimeouts() {
         Instant now = Instant.now();
         List<GameRoom> timedOutRooms = new ArrayList<>();
@@ -87,7 +91,7 @@ public class GameService {
                     roomRepository.deleteById(room.getRoomId());
                 }
                 else if (room.hasInactivityTimedOut(now)) {
-                    String idlePlayerId = (room.getGame().getGameStatus() == Game.GameStatus.PLAYER_1_TURN)
+                    PlayerId idlePlayerId = (room.getGame().getGameStatus() == Game.GameStatus.PLAYER_1_TURN)
                             ? room.getGame().getPlayer1().getId()
                             : room.getGame().getPlayer2().getId();
 
@@ -103,21 +107,13 @@ public class GameService {
         return timedOutRooms;
     }
 
-    // --- HELPER METHODS ---
-
-    private GameRoom getRoomOrThrow(String roomId) {
-        GameRoom room = roomRepository.findById(roomId);
-        if (room == null) {
-            throw new IllegalArgumentException("Room not found: " + roomId);
-        }
-        return room;
+    private GameRoom getRoomOrThrow(RoomId roomId) {
+        return roomRepository.findById(roomId)
+                .orElseThrow(() -> new RoomNotFoundException(roomId.value()));
     }
 
     private void publishEvents(GameRoom room) {
-        // Pull all the uncommitted events out of the room's outbox
         List<DomainEvent> events = room.getUncommittedEvents();
-
-        // Hand them off to the unknown infrastructure layer to deal with
         for (DomainEvent event : events) {
             eventPublisher.publish(event);
         }

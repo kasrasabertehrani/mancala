@@ -2,34 +2,39 @@ package com.mancalagame.infrastructure.adapter.out.repository;
 
 import com.mancalagame.application.port.out.GameRoomRepositoryPort;
 import com.mancalagame.domain.model.GameRoom;
-import com.mancalagame.infrastructure.SessionTracker;
+import com.mancalagame.domain.model.vo.RoomId;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Repository
 public class InMemoryRoomRepositoryAdapter implements GameRoomRepositoryPort {
 
-    private final ConcurrentHashMap<String, GameRoom> activeRooms = new ConcurrentHashMap<>();
-    private final SessionTracker sessionTracker;
+    // The internal map still uses String for the key
+    private final ConcurrentHashMap<String, GameRoom> rooms = new ConcurrentHashMap<>();
 
-    public InMemoryRoomRepositoryAdapter(SessionTracker sessionTracker) {
-        this.sessionTracker = sessionTracker;
+    @Override
+    public void save(GameRoom room) {
+        // Extract the raw string value to use as the map key
+        rooms.put(room.getRoomId().value(), room);
     }
 
     @Override
-    public GameRoom findById(String roomId) { return activeRooms.get(roomId); }
-
-    @Override
-    public void save(GameRoom room) { activeRooms.put(room.getRoomId(), room); }
-
-    @Override
-    public void deleteById(String roomId) {
-        activeRooms.remove(roomId);
-        sessionTracker.removeSessionsByRoomId(roomId);
+    public Optional<GameRoom> findById(RoomId roomId) {
+        // Wrap the result in an Optional, extracting the string value for the lookup
+        return Optional.ofNullable(rooms.get(roomId.value()));
     }
 
     @Override
-    public Collection<GameRoom> findAll() { return activeRooms.values(); }
+    public Collection<GameRoom> findAll() {
+        return rooms.values();
+    }
+
+    @Override
+    public void deleteById(RoomId roomId) {
+        // Extract the string value to remove it
+        rooms.remove(roomId.value());
+    }
 }

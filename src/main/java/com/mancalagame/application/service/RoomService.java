@@ -3,8 +3,10 @@ package com.mancalagame.application.service;
 import com.mancalagame.application.port.out.DomainEventPublisherPort;
 import com.mancalagame.application.port.out.GameRoomRepositoryPort;
 import com.mancalagame.domain.event.DomainEvent;
+import com.mancalagame.domain.exception.RoomNotFoundException;
 import com.mancalagame.domain.model.GameRoom;
 import com.mancalagame.domain.model.Player;
+import com.mancalagame.domain.model.vo.RoomId;
 import org.springframework.stereotype.Service;
 
 import java.util.Collection;
@@ -13,7 +15,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Service
 public class RoomService {
 
-    // 1. Pure interfaces only! No ConcurrentHashMap, no SessionTracker.
     private final GameRoomRepositoryPort roomRepository;
     private final DomainEventPublisherPort eventPublisher;
 
@@ -25,29 +26,25 @@ public class RoomService {
     }
 
     public GameRoom createRoom(Player host) {
-        String simpleRoomId = String.valueOf(roomCounter.getAndIncrement());
+        String simpleRoomIdStr = String.valueOf(roomCounter.getAndIncrement());
+        RoomId roomId = new RoomId(simpleRoomIdStr);
 
-        GameRoom newRoom = new GameRoom(simpleRoomId, host);
+        GameRoom newRoom = new GameRoom(roomId, host);
 
-        // Save it using the Port, not a local Map
         roomRepository.save(newRoom);
         return newRoom;
     }
 
-    public GameRoom joinRoom(String roomId, Player player2) {
-        GameRoom room = roomRepository.findById(roomId);
+    public GameRoom joinRoom(String roomIdStr, Player playerTwo) {
+        RoomId roomId = new RoomId(roomIdStr);
 
-        if (room == null) {
-            throw new IllegalArgumentException("Room not found: " + roomId);
-        }
+        GameRoom room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new RoomNotFoundException(roomId.value()));
 
         synchronized (room) {
-            room.addPlayer(player2);
-
-            // Save the updated state to the Port
+            room.addPlayer(playerTwo);
             roomRepository.save(room);
 
-            // Publish the PlayerJoinedEvent using the Port!
             for (DomainEvent event : room.getUncommittedEvents()) {
                 eventPublisher.publish(event);
             }
@@ -56,17 +53,18 @@ public class RoomService {
         return room;
     }
 
-    public GameRoom getRoom(String roomId) {
-        return roomRepository.findById(roomId);
+    public GameRoom getRoom(String roomIdStr) {
+        RoomId roomId = new RoomId(roomIdStr);
+        return roomRepository.findById(roomId)
+                .orElseThrow(() -> new RoomNotFoundException(roomId.value()));
     }
 
     public Collection<GameRoom> getAllRooms() {
         return roomRepository.findAll();
     }
 
-    public void removeRoom(String roomId) {
-        // Notice we don't call SessionTracker here anymore.
-        // The Infrastructure Adapter handles deleting the session tracking when deleteById is called!
+    public void removeRoom(String roomIdStr) {
+        RoomId roomId = new RoomId(roomIdStr);
         roomRepository.deleteById(roomId);
     }
 }
