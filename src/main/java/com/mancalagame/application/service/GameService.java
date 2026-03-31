@@ -32,7 +32,7 @@ public class GameService {
 
         GameRoom room = getRoomOrThrow(roomId);
 
-        synchronized (room) {
+
             room.makeMove(playerId, pitIndex);
             roomRepository.save(room);
             publishEvents(room);
@@ -41,7 +41,7 @@ public class GameService {
                 roomRepository.deleteById(roomId);
             }
             return room;
-        }
+
     }
 
     public GameRoom handlePlayerDisconnect(String roomIdStr, String playerIdStr) {
@@ -50,12 +50,12 @@ public class GameService {
 
         // We use map() here to cleanly handle the Optional without a null check
         return roomRepository.findById(roomId).map(room -> {
-            synchronized (room) {
+
                 room.playerLeftTable(playerId);
                 roomRepository.save(room);
                 publishEvents(room);
                 return room;
-            }
+
         }).orElse(null);
     }
 
@@ -64,17 +64,11 @@ public class GameService {
         PlayerId playerId = new PlayerId(playerIdStr);
 
         GameRoom room = getRoomOrThrow(roomId);
+        room.playerReturned(playerId);
+        roomRepository.save(room);
+        publishEvents(room);
+        return room;
 
-        synchronized (room) {
-            try {
-                room.playerReturned(playerId);
-                roomRepository.save(room);
-                publishEvents(room);
-            } catch (InvalidGameStateException e) {
-                System.out.println("Ignored redundant reconnect: " + e.getMessage());
-            }
-            return room;
-        }
     }
 
     public List<GameRoom> processTimeouts() {

@@ -17,8 +17,10 @@ public class InMemoryRoomRepositoryAdapter implements GameRoomRepositoryPort {
 
     @Override
     public void save(GameRoom room) {
-        // Extract the raw string value to use as the map key
-        rooms.put(room.getRoomId().value(), room);
+        
+        synchronized (room) {
+            rooms.put(room.getRoomId().value(), room);
+        }
     }
 
     @Override
