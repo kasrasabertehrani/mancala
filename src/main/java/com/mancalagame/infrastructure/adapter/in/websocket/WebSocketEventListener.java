@@ -39,6 +39,7 @@ public class WebSocketEventListener {
             RoomId roomId = new RoomId(roomIdStr);
             PlayerId playerId = new PlayerId(playerIdStr);
 
+
             // Pass the broken session ID down the chain!
             gameService.handlePlayerDisconnect(roomId, playerId);
 
