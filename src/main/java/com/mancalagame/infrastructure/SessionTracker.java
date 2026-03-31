@@ -1,6 +1,9 @@
 package com.mancalagame.infrastructure;
 
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -27,16 +30,27 @@ public class SessionTracker {
     public String getRoomId(String sessionId) { return sessionToRoom.get(sessionId); }
 
     public void removeSession(String sessionId) {
-        sessionToPlayer.remove(sessionId);
+        String playerId = sessionToPlayer.remove(sessionId);
         sessionToRoom.remove(sessionId);
+
+        // Clean up player's active session if this was their current one
+        if (playerId != null && sessionId.equals(playerToActiveSession.get(playerId))) {
+            playerToActiveSession.remove(playerId);
+        }
     }
 
+    // THE FIX: Prevents the ConcurrentModificationException Memory Leak!
     public void removeSessionsByRoomId(String roomId) {
+        List<String> sessionsToRemove = new ArrayList<>();
+
         sessionToRoom.forEach((sessionId, room) -> {
             if (room.equals(roomId)) {
-                sessionToPlayer.remove(sessionId);
-                sessionToRoom.remove(sessionId);
+                sessionsToRemove.add(sessionId);
             }
         });
+
+        for (String sessionId : sessionsToRemove) {
+            removeSession(sessionId);
+        }
     }
 }

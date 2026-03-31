@@ -26,13 +26,12 @@ public class GameService {
         this.eventPublisher = eventPublisher;
     }
 
-    public GameRoom makeMove(String roomIdStr, String playerIdStr, int pitIndex) {
-        RoomId roomId = new RoomId(roomIdStr);
-        PlayerId playerId = new PlayerId(playerIdStr);
+    public GameRoom makeMove(RoomId roomId, PlayerId playerId, int pitIndex) {
+
 
         GameRoom room = getRoomOrThrow(roomId);
 
-
+        synchronized (room) {
             room.makeMove(playerId, pitIndex);
             roomRepository.save(room);
             publishEvents(room);
@@ -41,34 +40,33 @@ public class GameService {
                 roomRepository.deleteById(roomId);
             }
             return room;
-
+        }
     }
 
-    public GameRoom handlePlayerDisconnect(String roomIdStr, String playerIdStr) {
-        RoomId roomId = new RoomId(roomIdStr);
-        PlayerId playerId = new PlayerId(playerIdStr);
+    public GameRoom handlePlayerDisconnect(RoomId roomId, PlayerId playerId) {
+
 
         // We use map() here to cleanly handle the Optional without a null check
         return roomRepository.findById(roomId).map(room -> {
-
+            synchronized (room) {
                 room.playerLeftTable(playerId);
                 roomRepository.save(room);
                 publishEvents(room);
                 return room;
-
+            }
         }).orElse(null);
     }
 
-    public GameRoom handlePlayerReconnect(String roomIdStr, String playerIdStr) {
-        RoomId roomId = new RoomId(roomIdStr);
-        PlayerId playerId = new PlayerId(playerIdStr);
+    public GameRoom handlePlayerReconnect(RoomId roomId, PlayerId playerId) {
+
 
         GameRoom room = getRoomOrThrow(roomId);
-        room.playerReturned(playerId);
-        roomRepository.save(room);
-        publishEvents(room);
-        return room;
-
+        synchronized (room) {
+            room.playerReturned(playerId);
+            roomRepository.save(room);
+            publishEvents(room);
+            return room;
+        }
     }
 
     public List<GameRoom> processTimeouts() {

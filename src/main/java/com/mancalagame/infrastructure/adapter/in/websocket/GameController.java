@@ -1,9 +1,13 @@
 package com.mancalagame.infrastructure.adapter.in.websocket;
 
+import com.mancalagame.application.service.GameService;
+import com.mancalagame.domain.exception.DomainException;
+import com.mancalagame.domain.model.vo.PlayerId;
+import com.mancalagame.domain.model.vo.RoomId;
+import com.mancalagame.infrastructure.SessionTracker;
 import com.mancalagame.infrastructure.adapter.in.websocket.payload.PlayPitCommand;
 import com.mancalagame.infrastructure.adapter.in.websocket.payload.ReconnectRequest;
-import com.mancalagame.application.service.GameService;
-import com.mancalagame.infrastructure.SessionTracker;
+import jakarta.validation.Valid;
 import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -22,37 +26,56 @@ public class GameController {
         this.sessionTracker = sessionTracker;
     }
 
-
     @MessageMapping("/game.move")
-    public void makeMove(@Payload PlayPitCommand command, SimpMessageHeaderAccessor headerAccessor) {
-        if (command.getRoomId() == null || command.getPlayerId() == null) {
-            throw new IllegalArgumentException("Room ID and Player ID are required.");
+    public void makeMove(@Valid @Payload PlayPitCommand command, SimpMessageHeaderAccessor headerAccessor) {
+        // 1. Validate Session
+        String sessionId = headerAccessor.getSessionId();
+        if (sessionId == null) {
+            throw new IllegalArgumentException("Invalid session");
         }
 
-        // 1. Memorize this player's session ID (acts as a safety net)
-        sessionTracker.trackSession(headerAccessor.getSessionId(), command.getPlayerId(), command.getRoomId());
+        // 2. Translate to Value Objects
+        RoomId roomId = new RoomId(command.getRoomId());
+        PlayerId playerId = new PlayerId(command.getPlayerId());
 
-        // 2. Tell the Service to make the move.
-        // Notice: We deleted the manual broadcast!
-        // The GameService will generate a MoveMadeEvent, and our GameEventBroadcaster will catch it.
-        gameService.makeMove(command.getRoomId(), command.getPlayerId(), command.getPitIndex());
+        // 3. Track and Execute
+        sessionTracker.trackSession(sessionId, command.getPlayerId(), command.getRoomId());
+        gameService.makeMove(roomId, playerId, command.getPitIndex());
     }
 
     @MessageMapping("/game.reconnect")
-    public void reconnect(@Payload ReconnectRequest request, SimpMessageHeaderAccessor headerAccessor) {
+    public void reconnect(@Valid @Payload ReconnectRequest request, SimpMessageHeaderAccessor headerAccessor) {
+        // 1. Validate Session
         String sessionId = headerAccessor.getSessionId();
+        if (sessionId == null) {
+            throw new IllegalArgumentException("Invalid session");
+        }
 
-        // 1. Re-register their brand new WebSocket session in our memory
+        // 2. Translate to Value Objects
+        RoomId roomId = new RoomId(request.getRoomId());
+        PlayerId playerId = new PlayerId(request.getPlayerId());
+
+        // 3. Track and Execute
         sessionTracker.trackSession(sessionId, request.getPlayerId(), request.getRoomId());
-
-        // 2. Tell the Domain to stop the forfeit timer and update its internal session mapping.
-        // The GameEventBroadcaster will automatically catch the PlayerReconnectedEvent!
-        gameService.handlePlayerReconnect(request.getRoomId(), request.getPlayerId());
+        gameService.handlePlayerReconnect(roomId, playerId);
     }
 
-    @MessageExceptionHandler
+    // --- EXCEPTION HANDLERS ---
+
+    // Catches Domain Exceptions (like InvalidGameState) and sends the error to the specific user
+    @MessageExceptionHandler({DomainException.class, IllegalArgumentException.class})
     @SendToUser("/queue/errors")
     public String handleException(Exception ex) {
         return ex.getMessage();
+    }
+
+    // Catches the @Valid payload validation failures and extracts your custom error messages
+    @MessageExceptionHandler(org.springframework.messaging.handler.annotation.support.MethodArgumentNotValidException.class)
+    @SendToUser("/queue/errors")
+    public String handleValidationExceptions(org.springframework.messaging.handler.annotation.support.MethodArgumentNotValidException ex) {
+        if (ex.getBindingResult().hasErrors()) {
+            return ex.getBindingResult().getAllErrors().get(0).getDefaultMessage();
+        }
+        return "Invalid request format";
     }
 }

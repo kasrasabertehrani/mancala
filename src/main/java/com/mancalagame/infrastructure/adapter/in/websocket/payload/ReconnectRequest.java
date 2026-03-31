@@ -1,7 +1,13 @@
 package com.mancalagame.infrastructure.adapter.in.websocket.payload;
 
+import jakarta.validation.constraints.NotBlank;
+
 public class ReconnectRequest {
+
+    @NotBlank(message = "Room ID is required and cannot be empty")
     private String roomId;
+
+    @NotBlank(message = "Room ID is required and cannot be empty")
     private String playerId;
 
     public ReconnectRequest() {}

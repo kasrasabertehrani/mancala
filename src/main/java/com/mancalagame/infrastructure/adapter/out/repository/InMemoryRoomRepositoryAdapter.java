@@ -17,10 +17,9 @@ public class InMemoryRoomRepositoryAdapter implements GameRoomRepositoryPort {
 
     @Override
     public void save(GameRoom room) {
-        
-        synchronized (room) {
+
             rooms.put(room.getRoomId().value(), room);
-        }
+
     }
 
     @Override

@@ -7,6 +7,7 @@ import com.mancalagame.domain.model.Player;
 import com.mancalagame.infrastructure.adapter.in.web.payload.CreateRoomRequest;
 import com.mancalagame.infrastructure.adapter.in.web.payload.JoinRoomRequest;
 import com.mancalagame.application.service.RoomService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.messaging.simp.SimpMessagingTemplate; // <-- Import this
@@ -24,7 +25,7 @@ public class RoomController {
 
     // 1. POST /api/rooms/create
     @PostMapping("/create")
-    public ResponseEntity<GameRoom> createRoom(@RequestBody CreateRoomRequest request) {
+    public ResponseEntity<GameRoom> createRoom(@Valid @RequestBody CreateRoomRequest request) {
         // Create the host player using the name from the JSON
         Player host = new Player(request.getPlayerName());
 
@@ -37,25 +38,17 @@ public class RoomController {
 
     // In RoomController.java
     @PostMapping("/join")
-    public ResponseEntity<?> joinRoom(@RequestBody JoinRoomRequest request) {
-        try {
+    public ResponseEntity<?> joinRoom(@Valid @RequestBody JoinRoomRequest request) {
+
             Player player2 = new Player(request.getPlayerName());
             GameRoom room = roomService.joinRoom(request.getRoomId(), player2);
             return ResponseEntity.ok(room);
-        } catch (RoomNotFoundException e) {
-            return ResponseEntity.badRequest().body("Room not found: " + e.getRoomId());
-        } catch (InvalidGameStateException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
     }
 
     // 3. GET /api/rooms/{roomId} - For reconnection
     @GetMapping("/{roomId}")
     public ResponseEntity<GameRoom> getRoom(@PathVariable String roomId) {
         GameRoom room = roomService.getRoom(roomId);
-        if (room == null) {
-            return ResponseEntity.notFound().build();
-        }
         return ResponseEntity.ok(room);
     }
 }
