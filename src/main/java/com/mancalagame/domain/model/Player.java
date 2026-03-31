@@ -1,8 +1,13 @@
 package com.mancalagame.domain.model;
 
 import com.mancalagame.domain.model.vo.PlayerId;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.UUID;
 
+@Getter
+@Setter
 public class Player {
 
     private PlayerId id;
@@ -10,36 +15,7 @@ public class Player {
     private int stones;
 
     public Player(String name) {
-        // Generates the UUID and wraps it in our new Value Object
         this.id = new PlayerId(UUID.randomUUID().toString());
         this.name = name;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public PlayerId getId() {
-        return id;
-    }
-
-    public void setId(PlayerId id) {
-        this.id = id;
-    }
-
-    public int getStones() {
-        return stones;
-    }
-
-    public void setStones(int stones) {
-        this.stones = stones;
-    }
-
-    public void dropStone() {
-        if (stones > 0) stones--;
     }
 }
