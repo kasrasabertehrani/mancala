@@ -31,7 +31,7 @@ public class GameService {
 
         GameRoom room = getRoomOrThrow(roomId);
 
-
+        synchronized (room) {
             room.makeMove(playerId, pitIndex);
             roomRepository.save(room);
             publishEvents(room);
@@ -40,7 +40,7 @@ public class GameService {
                 roomRepository.deleteById(roomId);
             }
             return room;
-
+        }
     }
 
     public GameRoom handlePlayerDisconnect(RoomId roomId, PlayerId playerId) {
@@ -48,12 +48,12 @@ public class GameService {
 
         // We use map() here to cleanly handle the Optional without a null check
         return roomRepository.findById(roomId).map(room -> {
-
+            synchronized (room) {
                 room.playerLeftTable(playerId);
                 roomRepository.save(room);
                 publishEvents(room);
                 return room;
-
+            }
         }).orElse(null);
     }
 
@@ -61,11 +61,12 @@ public class GameService {
 
 
         GameRoom room = getRoomOrThrow(roomId);
-        room.playerReturned(playerId);
-        roomRepository.save(room);
-        publishEvents(room);
-        return room;
-
+        synchronized (room) {
+            room.playerReturned(playerId);
+            roomRepository.save(room);
+            publishEvents(room);
+            return room;
+        }
     }
 
     public List<GameRoom> processTimeouts() {
