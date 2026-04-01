@@ -1,17 +1,18 @@
 package com.mancalagame.domain.model;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class Pit {
+
     private int stones;
 
     public Pit(int startingStones) {
         this.stones = startingStones;
     }
 
-    public int getStones() {
-        return stones;
-    }
-
-    // Adds exactly one stone (used during the sowing loop)
     public void increment() {
         this.stones++;
     }
