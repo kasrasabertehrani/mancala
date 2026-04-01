@@ -3,7 +3,9 @@ package com.mancalagame.domain.model;
 import com.mancalagame.domain.exception.InvalidGameStateException;
 import com.mancalagame.domain.exception.InvalidPlayerException;
 import com.mancalagame.domain.model.vo.PlayerId;
+import lombok.Getter;
 
+@Getter
 public class Game {
 
     public enum GameStatus {
@@ -19,7 +21,7 @@ public class Game {
     private Player player2;
     private final Board board;
     private GameStatus gameStatus;
-    private PlayerId absentPlayerId; // <-- Using Value Object
+    private PlayerId absentPlayerId;
     private GameStatus previousStatus;
 
     public Game(Player player1) {
@@ -43,8 +45,8 @@ public class Game {
 
     private void endGame() {
         this.gameStatus = GameStatus.GAME_OVER;
-        board.sweepRemaining(Board.PLAYER_1_PIT_START, Board.PLAYER_1_PIT_END, Board.PLAYER_1_STORE);
-        board.sweepRemaining(Board.PLAYER_2_PIT_START, Board.PLAYER_2_PIT_END, Board.PLAYER_2_STORE);
+        board.sweepRemainingToStoreOfNonEmptySide(Board.PLAYER_1_PIT_START, Board.PLAYER_1_PIT_END, Board.PLAYER_1_STORE);
+        board.sweepRemainingToStoreOfNonEmptySide(Board.PLAYER_2_PIT_START, Board.PLAYER_2_PIT_END, Board.PLAYER_2_STORE);
     }
 
     public void playTurn(PlayerId playerId, int pitIndex) {
@@ -120,22 +122,27 @@ public class Game {
 
         boolean isPlayer1 = isPlayer1(playerId);
 
-        if (this.gameStatus == GameStatus.WAITING_FOR_PLAYER_2
-                || this.gameStatus == GameStatus.GAME_OVER
-                || this.gameStatus == GameStatus.FORFEIT
-                || this.gameStatus == GameStatus.MATCH_SUSPENDED) {
+        if (
+                this.gameStatus == GameStatus.WAITING_FOR_PLAYER_2 ||
+                this.gameStatus == GameStatus.GAME_OVER ||
+                this.gameStatus == GameStatus.FORFEIT ||
+                this.gameStatus == GameStatus.MATCH_SUSPENDED
+        ) {
             throw new InvalidGameStateException("Game is not in a playable state.");
         }
+
         if (isPlayer1 && this.gameStatus != GameStatus.PLAYER_1_TURN) {
             throw new InvalidGameStateException("Not Player 1's turn!");
         }
+
         if (!isPlayer1 && this.gameStatus != GameStatus.PLAYER_2_TURN) {
             throw new InvalidGameStateException("Not Player 2's turn!");
         }
 
-        if (!board.isOnSide(isPlayer1, pitIndex)) {
+        if (board.lastStoneIsNotCurPlayerSide(isPlayer1, pitIndex)) {
             throw new InvalidGameStateException(isPlayer1 ? "Player 1 can only pick pits 0-5." : "Player 2 can only pick pits 7-12.");
         }
+
         if (board.getStonesAt(pitIndex) == 0) {
             throw new InvalidGameStateException("Cannot pick an empty pit.");
         }
@@ -146,10 +153,5 @@ public class Game {
     }
 
     public int getPlayer1Score() { return board.getPlayer1Score(); }
-    public int getPlayer2Score() { return board.getPlayer2Score(); }
-    public Player getPlayer1() { return player1; }
-    public Player getPlayer2() { return player2; }
-    public Board getBoard() { return board; }
-    public GameStatus getGameStatus() { return gameStatus; }
-    public PlayerId getAbsentPlayerId() { return absentPlayerId; }
+    public int getPlayer2Score() { return board.getPlayer2Score(); } // check later
 }
