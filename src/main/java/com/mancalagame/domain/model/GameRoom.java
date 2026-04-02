@@ -13,8 +13,8 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Getter
-@Setter
+
+
 public class GameRoom {
     private final RoomId roomId;
     private final Game game;
@@ -49,7 +49,8 @@ public class GameRoom {
         validatePlayer(playerId);
         game.playTurn(playerId, pitIndex);
         recordActivity();
-        domainEvents.add(new MoveMadeEvent(roomId, playerId, pitIndex, game.getGameStatus()));
+        domainEvents.add(new MoveMadeEvent(roomId, playerId, pitIndex, game.getGameStatus(),
+                game.isLastMoveCaptured(), game.isLastMoveGrantedFreeTurn()));
     }
 
     public void playerLeftTable(PlayerId playerId) {
@@ -108,4 +109,9 @@ public class GameRoom {
             throw new InvalidPlayerException(playerId.value(), "Player not in this room");
         }
     }
+
+    public RoomId getRoomId() { return roomId; }
+    public Game getGame() { return game; }
+    public Map<PlayerId, Player> getPlayers() { return new HashMap<>(players); }
 }
+
