@@ -1,10 +1,7 @@
 package com.mancalagame.domain.model;
 
-import lombok.Getter;
-import lombok.Setter;
 
-@Getter
-@Setter
+
 public class Board {
 
     static final int TOTAL_PITS = 14;
@@ -47,16 +44,18 @@ public class Board {
         return currentIndex;
     }
 
-    public void attemptCapture(boolean isPlayer1, int lastIndex, int myStoreIndex) {
-        if (lastIndex == myStoreIndex) return;
-        if (lastStoneIsNotCurPlayerSide(isPlayer1, lastIndex)) return;
-        if (pits[lastIndex].getStones() != 1) return;
+    public boolean attemptCapture(boolean isPlayer1, int lastIndex, int myStoreIndex) {
+        if (lastIndex == myStoreIndex) return false;
+        if (lastStoneIsNotCurPlayerSide(isPlayer1, lastIndex)) return false;
+        if (pits[lastIndex].getStones() != 1) return false;
 
         int oppositeIndex = PLAYER_2_PIT_END - lastIndex;
         if (pits[oppositeIndex].getStones() > 0) {
             int capturedStones = pits[oppositeIndex].clear() + pits[lastIndex].clear();
             pits[myStoreIndex].addStones(capturedStones);
+            return true;
         }
+        return false;
     }
 
     public void sweepRemainingToStoreOfNonEmptySide(int from, int to, int storeIndex) {
@@ -88,6 +87,6 @@ public class Board {
     }
 
     public int getPlayer1Score() { return pits[PLAYER_1_STORE].getStones(); }
-
+    public Pit[] getPits() { return pits; }
     public int getPlayer2Score() { return pits[PLAYER_2_STORE].getStones(); }
 }

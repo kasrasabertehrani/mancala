@@ -3,9 +3,9 @@ package com.mancalagame.domain.model;
 import com.mancalagame.domain.exception.InvalidGameStateException;
 import com.mancalagame.domain.exception.InvalidPlayerException;
 import com.mancalagame.domain.model.vo.PlayerId;
-import lombok.Getter;
 
-@Getter
+
+
 public class Game {
 
     public enum GameStatus {
@@ -23,6 +23,9 @@ public class Game {
     private GameStatus gameStatus;
     private PlayerId absentPlayerId;
     private GameStatus previousStatus;
+
+    private boolean lastMoveCaptured = false;
+    private boolean lastMoveGrantedFreeTurn = false;
 
     public Game(Player player1) {
         this.player1 = player1;
@@ -57,9 +60,13 @@ public class Game {
         int opponentStoreIndex = board.getStoreIndex(!isPlayer1);
 
         int lastIndex = board.sowStones(pitIndex, opponentStoreIndex);
-        board.attemptCapture(isPlayer1, lastIndex, myStoreIndex);
 
-        if (lastIndex != myStoreIndex) {
+        this.lastMoveCaptured = board.attemptCapture(isPlayer1, lastIndex, myStoreIndex);
+
+
+        this.lastMoveGrantedFreeTurn = (lastIndex == myStoreIndex);
+
+        if (!lastMoveGrantedFreeTurn) {
             switchTurn();
         }
 
@@ -154,4 +161,13 @@ public class Game {
 
     public int getPlayer1Score() { return board.getPlayer1Score(); }
     public int getPlayer2Score() { return board.getPlayer2Score(); } // check later
+
+
+    public Player getPlayer1() { return player1; }
+    public Player getPlayer2() { return player2; }
+    public Board getBoard() { return board; }
+    public GameStatus getGameStatus() { return gameStatus; }
+    public PlayerId getAbsentPlayerId() { return absentPlayerId; }
+    public boolean isLastMoveCaptured() { return lastMoveCaptured; }
+    public boolean isLastMoveGrantedFreeTurn() { return lastMoveGrantedFreeTurn; }
 }
