@@ -126,4 +126,37 @@ public class BoardTest {
 
         assertEquals(1,  board.getPlayer2Score());
     }
+
+    @Test
+    void shouldNotCaptureWhenNotLastStoneCurPlayerSide() {
+        Board board = new Board();
+
+        assertFalse(board.attemptCapture(true, 7, 6));
+    }
+
+    @Test
+    void shouldNotCaptureIfLastPitIsNotEmpty() {
+        Board board = new Board();
+
+        assertFalse(board.attemptCapture(true, 5, 6));
+    }
+
+    @Test
+    void shouldNotCaptureIfIfNoStonesInOpponentsPit() {
+        Board board = new Board();
+        board.getPits()[0].setStones(1);
+        board.getPits()[12].setStones(0);
+
+        assertFalse(board.attemptCapture(true, 0, 6));
+    }
+
+    @Test
+    void shouldCaptureIfLastPitEmptyAndOpponentPitNotEmpty() {
+        Board board = new Board();
+        board.getPits()[0].setStones(1);
+        board.getPits()[12].setStones(5);
+
+        assertTrue(board.attemptCapture(true, 0, 6));
+        assertEquals(6, board.getPits()[6].getStones());
+    }
 }
