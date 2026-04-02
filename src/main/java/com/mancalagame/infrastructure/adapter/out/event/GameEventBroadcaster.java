@@ -34,6 +34,9 @@ public class GameEventBroadcaster {
             // 3. Broadcast the state. Notice we use room.getRoomId().value() for the URL!
             messagingTemplate.convertAndSend("/topic/room/" + room.getRoomId().value(), room.getGame());
 
+            // 2. Channel B: Broadcast the raw Event (Triggers popups on the frontend)
+            messagingTemplate.convertAndSend("/topic/room/" + room.getRoomId().value() + "/events", event);
+
         });
     }
 }

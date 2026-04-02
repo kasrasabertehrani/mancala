@@ -47,10 +47,10 @@ public class GameRoom {
 
     public void makeMove(PlayerId playerId, int pitIndex) {
         validatePlayer(playerId);
-        game.playTurn(playerId, pitIndex);
+        Game.MoveResult result = game.playTurn(playerId, pitIndex);
         recordActivity();
         domainEvents.add(new MoveMadeEvent(roomId, playerId, pitIndex, game.getGameStatus(),
-                game.isLastMoveCaptured(), game.isLastMoveGrantedFreeTurn()));
+                result.wasCapture(), result.wasFreeTurn()));
     }
 
     public void playerLeftTable(PlayerId playerId) {

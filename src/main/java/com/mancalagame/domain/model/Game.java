@@ -24,8 +24,7 @@ public class Game {
     private PlayerId absentPlayerId;
     private GameStatus previousStatus;
 
-    private boolean lastMoveCaptured = false;
-    private boolean lastMoveGrantedFreeTurn = false;
+    public record MoveResult(boolean wasCapture, boolean wasFreeTurn) {}
 
     public Game(Player player1) {
         this.player1 = player1;
@@ -52,7 +51,7 @@ public class Game {
         board.sweepRemainingToStoreOfNonEmptySide(Board.PLAYER_2_PIT_START, Board.PLAYER_2_PIT_END, Board.PLAYER_2_STORE);
     }
 
-    public void playTurn(PlayerId playerId, int pitIndex) {
+    public MoveResult playTurn(PlayerId playerId, int pitIndex) {
         validateMove(playerId, pitIndex);
 
         boolean isPlayer1 = isPlayer1(playerId);
@@ -61,16 +60,17 @@ public class Game {
 
         int lastIndex = board.sowStones(pitIndex, opponentStoreIndex);
 
-        this.lastMoveCaptured = board.attemptCapture(isPlayer1, lastIndex, myStoreIndex);
+        boolean lastMoveCaptured = board.attemptCapture(isPlayer1, lastIndex, myStoreIndex);
 
 
-        this.lastMoveGrantedFreeTurn = (lastIndex == myStoreIndex);
+        boolean lastMoveGrantedFreeTurn = (lastIndex == myStoreIndex);
 
         if (!lastMoveGrantedFreeTurn) {
             switchTurn();
         }
 
         checkGameOver();
+        return new MoveResult(lastMoveCaptured, lastMoveGrantedFreeTurn);
     }
 
     private void checkGameOver() {
@@ -168,6 +168,5 @@ public class Game {
     public Board getBoard() { return board; }
     public GameStatus getGameStatus() { return gameStatus; }
     public PlayerId getAbsentPlayerId() { return absentPlayerId; }
-    public boolean isLastMoveCaptured() { return lastMoveCaptured; }
-    public boolean isLastMoveGrantedFreeTurn() { return lastMoveGrantedFreeTurn; }
+
 }

@@ -149,6 +149,20 @@ function joinWebSocket(roomId, playerId, pNum, initialGameState, isReconnecting 
             updateBoard(gameData);
         });
 
+        // CHANNEL B: The Event Channel (Listens for captures and free turns)
+        stompClient.subscribe('/topic/room/' + roomId + '/events', (message) => {
+            const eventData = JSON.parse(message.body);
+
+            console.log("RECEIVED EVENT FROM SERVER:", eventData);
+            // Jackson will serialize the MoveMadeEvent automatically!
+            if (eventData.captureOccurred === true) {
+                showActionNotification("💥 CAPTURE!", "capture");
+            }
+            if (eventData.freeTurnGranted === true) {
+                showActionNotification("🔄 FREE TURN!", "free-turn");
+            }
+        });
+
         // Only shout "reconnect" if the flag is true!
         if (isReconnecting) {
             stompClient.send('/app/game.reconnect', {}, JSON.stringify({
@@ -258,6 +272,7 @@ function updateBoard(gameData) {
 
     updatePitStates();
 
+
     if (gameData.gameStatus === 'WAITING_FOR_PLAYER_2') {
         statusDisplay.innerText = "Waiting for an opponent to join...";
     } else if (gameData.gameStatus === 'PLAYER_1_TURN') {
@@ -304,4 +319,26 @@ function disableAllPits() {
         pit.classList.add('disabled');
         pit.classList.remove('active');
     });
+}
+    // --- NOTIFICATIONS ---
+
+function showActionNotification(message, typeClass) {
+        const container = document.getElementById('notification-container');
+        if (!container) return;
+
+        // Create the banner
+        const banner = document.createElement('div');
+        banner.classList.add('action-notification');
+        if (typeClass) banner.classList.add(typeClass);
+        banner.innerText = message;
+
+        // Add to the screen
+        container.appendChild(banner);
+
+        // Clean it up after the CSS animation finishes (3 seconds)
+        setTimeout(() => {
+            if (banner.parentElement) {
+                banner.remove();
+            }
+        }, 3000);
 }
