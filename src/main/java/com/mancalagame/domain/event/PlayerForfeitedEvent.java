@@ -3,8 +3,12 @@ package com.mancalagame.domain.event;
 
 import com.mancalagame.domain.model.vo.PlayerId;
 import com.mancalagame.domain.model.vo.RoomId;
+import lombok.Getter;
 
+
+@Getter
 public class PlayerForfeitedEvent extends DomainEvent {
+
     private final PlayerId playerId;
     private final String reason;
 
@@ -13,7 +17,4 @@ public class PlayerForfeitedEvent extends DomainEvent {
         this.playerId = playerId;
         this.reason = reason;
     }
-
-    public PlayerId getPlayerId() { return playerId; }
-    public String getReason() { return reason; }
 }
