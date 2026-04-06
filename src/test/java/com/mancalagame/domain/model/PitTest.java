@@ -10,7 +10,7 @@ public class PitTest {
     void shouldIncrementStonesByOne() {
         Pit pit = new Pit(3);
 
-        pit.increment();
+        pit.addStone();
 
         assertEquals(4, pit.getStones());
     }
@@ -28,7 +28,7 @@ public class PitTest {
     void shouldReturnAllStonesAndEmptyPit() {
         Pit pit = new Pit(3);
 
-        assertEquals(3, pit.clear());
+        assertEquals(3, pit.pickAllStones());
         assertEquals(0, pit.getStones());
     }
 }

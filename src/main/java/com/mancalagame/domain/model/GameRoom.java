@@ -6,7 +6,6 @@ import com.mancalagame.domain.exception.InvalidPlayerException;
 import com.mancalagame.domain.model.vo.PlayerId;
 import com.mancalagame.domain.model.vo.RoomId;
 import lombok.Getter;
-import lombok.Setter;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -14,7 +13,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 
-
+@Getter
 public class GameRoom {
     private final RoomId roomId;
     private final Game game;
@@ -40,7 +39,6 @@ public class GameRoom {
         if (players.size() >= 2) throw new InvalidGameStateException("Room is full");
         players.put(playerTwo.getId(), playerTwo);
         game.setPlayer2(playerTwo);
-
         recordActivity();
         domainEvents.add(new PlayerJoinedEvent(roomId, playerTwo.getId()));
     }
@@ -57,14 +55,13 @@ public class GameRoom {
         validatePlayer(playerId);
         this.timePlayerLeft = Instant.now();
         game.markPlayerAbsent(playerId);
-
         domainEvents.add(new PlayerLeftTableEvent(roomId, playerId));
     }
 
     public void playerReturned(PlayerId playerId) {
         validatePlayer(playerId);
 
-        boolean wasSuspended = (game.getGameStatus() == Game.GameStatus.MATCH_SUSPENDED); // watch this closely :|
+        boolean wasSuspended = (game.getGameStatus() == Game.GameStatus.MATCH_SUSPENDED);
 
         if (!wasSuspended) {
             throw new InvalidGameStateException("Player " + playerId.value() + " was not absent and cannot return.");
@@ -109,10 +106,4 @@ public class GameRoom {
             throw new InvalidPlayerException(playerId.value(), "Player not in this room");
         }
     }
-
-    public RoomId getRoomId() { return roomId; }
-
-    public Game getGame() { return game; }
-
-    public Map<PlayerId, Player> getPlayers() { return new HashMap<>(players); }
 }
