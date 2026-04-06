@@ -1,7 +1,9 @@
 package com.mancalagame.domain.model;
 
 
+import lombok.Getter;
 
+@Getter
 public class Board {
 
     static final int TOTAL_PITS = 14;
@@ -27,7 +29,7 @@ public class Board {
     }
 
     public int sowStones(int pitIndex, int opponentStoreIndex) {
-        int stonesInHand = pits[pitIndex].clear();
+        int stonesInHand = pits[pitIndex].pickAllStones();
         int currentIndex = pitIndex;
 
         while (stonesInHand > 0) {
@@ -37,10 +39,9 @@ public class Board {
                 continue;
             }
 
-            pits[currentIndex].increment();
+            pits[currentIndex].addStone();
             stonesInHand--;
         }
-
         return currentIndex;
     }
 
@@ -51,7 +52,7 @@ public class Board {
 
         int oppositeIndex = PLAYER_2_PIT_END - lastIndex;
         if (pits[oppositeIndex].getStones() > 0) {
-            int capturedStones = pits[oppositeIndex].clear() + pits[lastIndex].clear();
+            int capturedStones = pits[oppositeIndex].pickAllStones() + pits[lastIndex].pickAllStones();
             pits[myStoreIndex].addStones(capturedStones);
             return true;
         }
@@ -60,7 +61,7 @@ public class Board {
 
     public void sweepRemainingToStoreOfNonEmptySide(int from, int to, int storeIndex) {
         for (int i = from; i <= to; i++) {
-            int remainingStones = pits[i].clear();
+            int remainingStones = pits[i].pickAllStones();
             pits[storeIndex].addStones(remainingStones);
         }
     }
@@ -78,6 +79,14 @@ public class Board {
                 (pitIndex < PLAYER_2_PIT_START || pitIndex > PLAYER_2_PIT_END);
     }
 
+    public int getPlayer1Score() {
+        return pits[PLAYER_1_STORE].getStones();
+    }
+
+    public int getPlayer2Score() {
+        return pits[PLAYER_2_STORE].getStones();
+    }
+
     public int getStoreIndex(boolean isPlayer1) {
         return isPlayer1 ? PLAYER_1_STORE : PLAYER_2_STORE;
     }
@@ -85,8 +94,4 @@ public class Board {
     public int getStonesAt(int index) {
         return pits[index].getStones();
     }
-
-    public int getPlayer1Score() { return pits[PLAYER_1_STORE].getStones(); }
-    public Pit[] getPits() { return pits; }
-    public int getPlayer2Score() { return pits[PLAYER_2_STORE].getStones(); }
 }

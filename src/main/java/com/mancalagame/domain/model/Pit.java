@@ -13,17 +13,15 @@ public class Pit {
         this.stones = startingStones;
     }
 
-    public void increment() {
+    public void addStone() {
         this.stones++;
     }
 
-    // Adds multiple stones (used during a capture or the final sweep)
     public void addStones(int amount) {
         this.stones += amount;
     }
 
-    // Empties the pit and tells you how many stones you just picked up
-    public int clear() {
+    public int pickAllStones() {
         int pickedUp = this.stones;
         this.stones = 0;
         return pickedUp;

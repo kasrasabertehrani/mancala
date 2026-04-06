@@ -3,9 +3,10 @@ package com.mancalagame.domain.model;
 import com.mancalagame.domain.exception.InvalidGameStateException;
 import com.mancalagame.domain.exception.InvalidPlayerException;
 import com.mancalagame.domain.model.vo.PlayerId;
+import lombok.Getter;
 
 
-
+@Getter
 public class Game {
 
     public enum GameStatus {
@@ -37,14 +38,6 @@ public class Game {
         this.gameStatus = GameStatus.PLAYER_1_TURN;
     }
 
-    private void switchTurn() {
-        if (this.gameStatus == GameStatus.PLAYER_1_TURN) {
-            this.gameStatus = GameStatus.PLAYER_2_TURN;
-        } else {
-            this.gameStatus = GameStatus.PLAYER_1_TURN;
-        }
-    }
-
     public MoveResult playTurn(PlayerId playerId, int pitIndex) {
         validateMove(playerId, pitIndex);
 
@@ -56,7 +49,6 @@ public class Game {
 
         boolean lastMoveCaptured = board.attemptCapture(isPlayer1, lastIndex, myStoreIndex);
 
-
         boolean lastMoveGrantedFreeTurn = (lastIndex == myStoreIndex);
 
         if (!lastMoveGrantedFreeTurn) {
@@ -67,10 +59,17 @@ public class Game {
         return new MoveResult(lastMoveCaptured, lastMoveGrantedFreeTurn);
     }
 
+    private void switchTurn() {
+        if (this.gameStatus == GameStatus.PLAYER_1_TURN) {
+            this.gameStatus = GameStatus.PLAYER_2_TURN;
+        } else {
+            this.gameStatus = GameStatus.PLAYER_1_TURN;
+        }
+    }
+
     private void checkGameOver() {
         boolean p1Empty = board.isSideEmpty(Board.PLAYER_1_PIT_START, Board.PLAYER_1_PIT_END);
         boolean p2Empty = board.isSideEmpty(Board.PLAYER_2_PIT_START, Board.PLAYER_2_PIT_END);
-
         if (p1Empty || p2Empty) {
             endGame();
         }
@@ -102,7 +101,7 @@ public class Game {
         return true;
     }
 
-    public void forfeit(PlayerId playerId) { // what's the difference?
+    public void forfeit(PlayerId playerId) {
         this.gameStatus = GameStatus.FORFEIT;
         this.absentPlayerId = playerId;
     }
@@ -162,15 +161,4 @@ public class Game {
     private boolean isPlayer1(PlayerId playerId) {
         return this.player1.getId().equals(playerId);
     }
-
-
-    public Player getPlayer1() { return player1; }
-
-    public Player getPlayer2() { return player2; }
-
-    public Board getBoard() { return board; }
-
-    public GameStatus getGameStatus() { return gameStatus; }
-
-    public PlayerId getAbsentPlayerId() { return absentPlayerId; }
 }
