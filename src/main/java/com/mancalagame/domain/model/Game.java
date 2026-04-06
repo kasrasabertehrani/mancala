@@ -40,15 +40,9 @@ public class Game {
     private void switchTurn() {
         if (this.gameStatus == GameStatus.PLAYER_1_TURN) {
             this.gameStatus = GameStatus.PLAYER_2_TURN;
-        } else if (this.gameStatus == GameStatus.PLAYER_2_TURN) {
+        } else {
             this.gameStatus = GameStatus.PLAYER_1_TURN;
         }
-    }
-
-    private void endGame() {
-        this.gameStatus = GameStatus.GAME_OVER;
-        board.sweepRemainingToStoreOfNonEmptySide(Board.PLAYER_1_PIT_START, Board.PLAYER_1_PIT_END, Board.PLAYER_1_STORE);
-        board.sweepRemainingToStoreOfNonEmptySide(Board.PLAYER_2_PIT_START, Board.PLAYER_2_PIT_END, Board.PLAYER_2_STORE);
     }
 
     public MoveResult playTurn(PlayerId playerId, int pitIndex) {
@@ -82,6 +76,12 @@ public class Game {
         }
     }
 
+    private void endGame() {
+        this.gameStatus = GameStatus.GAME_OVER;
+        board.sweepRemainingToStoreOfNonEmptySide(Board.PLAYER_1_PIT_START, Board.PLAYER_1_PIT_END, Board.PLAYER_1_STORE);
+        board.sweepRemainingToStoreOfNonEmptySide(Board.PLAYER_2_PIT_START, Board.PLAYER_2_PIT_END, Board.PLAYER_2_STORE);
+    }
+
     public void markPlayerAbsent(PlayerId playerId) {
         if (player2 == null) {
             this.gameStatus = GameStatus.GAME_OVER;
@@ -92,21 +92,21 @@ public class Game {
         this.absentPlayerId = playerId;
     }
 
-    public void markPlayerReturned(PlayerId playerId) {
-        if (gameStatus != GameStatus.MATCH_SUSPENDED) return;
-        if (!playerId.equals(absentPlayerId)) return;
+    public boolean markPlayerReturned(PlayerId playerId) {
+        if (gameStatus != GameStatus.MATCH_SUSPENDED) return false;
+        if (!playerId.equals(absentPlayerId)) return false;
 
         this.gameStatus = this.previousStatus;
         this.absentPlayerId = null;
         this.previousStatus = null;
+        return true;
     }
 
-    public void forfeit(PlayerId playerId) {
+    public void forfeit(PlayerId playerId) { // what's the difference?
         this.gameStatus = GameStatus.FORFEIT;
         this.absentPlayerId = playerId;
     }
 
-    // We still return String here so "DRAW" works cleanly with your DTOs
     public String getWinner() {
         if (gameStatus == GameStatus.FORFEIT) {
             return isPlayer1(absentPlayerId) ? player2.getId().value() : player1.getId().value();
@@ -122,21 +122,25 @@ public class Game {
     }
 
     private void validateMove(PlayerId playerId, int pitIndex) {
-        if (playerId == null || (!isPlayer1(playerId) && (player2 == null || !player2.getId().equals(playerId)))) {
+        if (
+                this.gameStatus == GameStatus.WAITING_FOR_PLAYER_2 || // join?
+                        this.gameStatus == GameStatus.GAME_OVER ||
+                        this.gameStatus == GameStatus.FORFEIT ||
+                        this.gameStatus == GameStatus.MATCH_SUSPENDED
+        ) {
+            throw new InvalidGameStateException("Game is not in a playable state.");
+        }
+
+        if (
+                playerId == null ||
+                (!isPlayer1(playerId) && !player2.getId().equals(playerId))
+        ) {
             String idVal = (playerId != null) ? playerId.value() : "null";
             throw new InvalidPlayerException(idVal, "Unknown player attempted a move.");
         }
 
         boolean isPlayer1 = isPlayer1(playerId);
 
-        if (
-                this.gameStatus == GameStatus.WAITING_FOR_PLAYER_2 ||
-                this.gameStatus == GameStatus.GAME_OVER ||
-                this.gameStatus == GameStatus.FORFEIT ||
-                this.gameStatus == GameStatus.MATCH_SUSPENDED
-        ) {
-            throw new InvalidGameStateException("Game is not in a playable state.");
-        }
 
         if (isPlayer1 && this.gameStatus != GameStatus.PLAYER_1_TURN) {
             throw new InvalidGameStateException("Not Player 1's turn!");
@@ -159,14 +163,14 @@ public class Game {
         return this.player1.getId().equals(playerId);
     }
 
-    public int getPlayer1Score() { return board.getPlayer1Score(); }
-    public int getPlayer2Score() { return board.getPlayer2Score(); } // check later
-
 
     public Player getPlayer1() { return player1; }
-    public Player getPlayer2() { return player2; }
-    public Board getBoard() { return board; }
-    public GameStatus getGameStatus() { return gameStatus; }
-    public PlayerId getAbsentPlayerId() { return absentPlayerId; }
 
+    public Player getPlayer2() { return player2; }
+
+    public Board getBoard() { return board; }
+
+    public GameStatus getGameStatus() { return gameStatus; }
+
+    public PlayerId getAbsentPlayerId() { return absentPlayerId; }
 }
