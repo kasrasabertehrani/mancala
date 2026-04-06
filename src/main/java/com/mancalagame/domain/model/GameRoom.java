@@ -111,7 +111,8 @@ public class GameRoom {
     }
 
     public RoomId getRoomId() { return roomId; }
+
     public Game getGame() { return game; }
+
     public Map<PlayerId, Player> getPlayers() { return new HashMap<>(players); }
 }
-
