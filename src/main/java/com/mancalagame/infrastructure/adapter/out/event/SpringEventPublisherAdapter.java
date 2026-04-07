@@ -5,6 +5,7 @@ import com.mancalagame.domain.event.DomainEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
+
 @Component
 public class SpringEventPublisherAdapter implements DomainEventPublisherPort {
 
@@ -16,7 +17,6 @@ public class SpringEventPublisherAdapter implements DomainEventPublisherPort {
 
     @Override
     public void publish(DomainEvent event) {
-        // We translate the pure Java call into a Spring Framework call
         springPublisher.publishEvent(event);
     }
 }

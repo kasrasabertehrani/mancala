@@ -1,8 +1,6 @@
 package com.mancalagame.domain.exception;
 
-/**
- * Thrown when a GameRoom cannot be found by its ID.
- */
+
 public class RoomNotFoundException extends DomainException {
 
     private final String roomId;

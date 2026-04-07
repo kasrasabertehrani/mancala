@@ -1,19 +1,18 @@
 package com.mancalagame.application.port.out;
 
-import com.mancalagame.domain.model.GameRoom;
+import com.mancalagame.domain.model.Room;
 import com.mancalagame.domain.model.vo.RoomId;
 
 import java.util.Collection;
 import java.util.Optional;
 
 public interface GameRoomRepositoryPort {
-    void save(GameRoom room);
 
-    // DDD FIX: Use RoomId and Optional!
-    Optional<GameRoom> findById(RoomId roomId);
+    void save(Room room);
 
-    Collection<GameRoom> findAll();
+    Optional<Room> findById(RoomId roomId);
 
-    // DDD FIX: Use RoomId!
+    Collection<Room> findAll();
+
     void deleteById(RoomId roomId);
 }
