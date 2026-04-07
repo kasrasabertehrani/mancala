@@ -3,10 +3,9 @@ package com.mancalagame.application.service;
 import com.mancalagame.application.port.out.DomainEventPublisherPort;
 import com.mancalagame.application.port.out.GameRoomRepositoryPort;
 import com.mancalagame.domain.event.DomainEvent;
-import com.mancalagame.domain.exception.InvalidGameStateException;
 import com.mancalagame.domain.exception.RoomNotFoundException;
 import com.mancalagame.domain.model.Game;
-import com.mancalagame.domain.model.GameRoom;
+import com.mancalagame.domain.model.Room;
 import com.mancalagame.domain.model.vo.PlayerId;
 import com.mancalagame.domain.model.vo.RoomId;
 import org.springframework.stereotype.Service;
@@ -14,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+
 
 @Service
 public class GameService {
@@ -26,11 +26,8 @@ public class GameService {
         this.eventPublisher = eventPublisher;
     }
 
-    public GameRoom makeMove(RoomId roomId, PlayerId playerId, int pitIndex) {
-
-
-        GameRoom room = getRoomOrThrow(roomId);
-
+    public Room makeMove(RoomId roomId, PlayerId playerId, int pitIndex) {
+        Room room = getRoomOrThrow(roomId);
         synchronized (room) {
             room.makeMove(playerId, pitIndex);
             roomRepository.save(room);
@@ -43,10 +40,7 @@ public class GameService {
         }
     }
 
-    public GameRoom handlePlayerDisconnect(RoomId roomId, PlayerId playerId) {
-
-
-        // We use map() here to cleanly handle the Optional without a null check
+    public Room handlePlayerDisconnect(RoomId roomId, PlayerId playerId) {
         return roomRepository.findById(roomId).map(room -> {
             synchronized (room) {
                 room.playerLeftTable(playerId);
@@ -57,10 +51,8 @@ public class GameService {
         }).orElse(null);
     }
 
-    public GameRoom handlePlayerReconnect(RoomId roomId, PlayerId playerId) {
-
-
-        GameRoom room = getRoomOrThrow(roomId);
+    public Room handlePlayerReconnect(RoomId roomId, PlayerId playerId) {
+        Room room = getRoomOrThrow(roomId);
         synchronized (room) {
             room.playerReturned(playerId);
             roomRepository.save(room);
@@ -69,11 +61,11 @@ public class GameService {
         }
     }
 
-    public List<GameRoom> processTimeouts() {
+    public List<Room> processTimeouts() {
         Instant now = Instant.now();
-        List<GameRoom> timedOutRooms = new ArrayList<>();
+        List<Room> timedOutRooms = new ArrayList<>();
 
-        for (GameRoom room : roomRepository.findAll()) {
+        for (Room room : roomRepository.findAll()) {
             synchronized (room) {
                 if (room.hasReconnectTimedOut(now)) {
                     room.forceForfeit(room.getGame().getAbsentPlayerId(), "Disconnect grace period expired.");
@@ -99,12 +91,12 @@ public class GameService {
         return timedOutRooms;
     }
 
-    private GameRoom getRoomOrThrow(RoomId roomId) {
+    private Room getRoomOrThrow(RoomId roomId) {
         return roomRepository.findById(roomId)
                 .orElseThrow(() -> new RoomNotFoundException(roomId.value()));
     }
 
-    private void publishEvents(GameRoom room) {
+    private void publishEvents(Room room) {
         List<DomainEvent> events = room.getUncommittedEvents();
         for (DomainEvent event : events) {
             eventPublisher.publish(event);

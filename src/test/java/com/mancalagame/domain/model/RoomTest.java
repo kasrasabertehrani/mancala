@@ -13,19 +13,19 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class GameRoomTest {
+public class RoomTest {
 
     @Test
     void shouldAddPlayerAndPublishEvent() {
         Player playerOne = new Player("Alice");
         Player playerTwo = new Player("Bob");
-        GameRoom gameRoom = new GameRoom(new RoomId("room-1"), playerOne);
+        Room room = new Room(new RoomId("room-1"), playerOne);
 
-        gameRoom.addPlayer(playerTwo);
+        room.addPlayer(playerTwo);
 
-        assertTrue(gameRoom.getPlayers().containsKey(playerTwo.getId()));
+        assertTrue(room.getPlayers().containsKey(playerTwo.getId()));
 
-        List<?> events = gameRoom.getUncommittedEvents();
+        List<?> events = room.getUncommittedEvents();
         assertEquals(1, events.size());
         assertInstanceOf(PlayerJoinedEvent.class, events.get(0));
 
@@ -38,23 +38,23 @@ public class GameRoomTest {
         Player playerOne = new Player("Alice");
         Player playerTwo = new Player("Bob");
         Player playerThree = new Player("Charlie");
-        GameRoom gameRoom = new GameRoom(new RoomId("room-1"), playerOne);
+        Room room = new Room(new RoomId("room-1"), playerOne);
 
-        gameRoom.addPlayer(playerTwo);
+        room.addPlayer(playerTwo);
 
-        assertThrows(InvalidGameStateException.class, () -> gameRoom.addPlayer(playerThree));
+        assertThrows(InvalidGameStateException.class, () -> room.addPlayer(playerThree));
     }
 
     @Test
     void shouldMakeMoveAndCreateEvent() {
         Player playerOne = new Player("Alice");
         Player playerTwo = new Player("Bob");
-        GameRoom gameRoom = new GameRoom(new RoomId("room-1"),  playerOne);
-        gameRoom.addPlayer(playerTwo);
+        Room room = new Room(new RoomId("room-1"),  playerOne);
+        room.addPlayer(playerTwo);
 
-        gameRoom.makeMove(playerOne.getId(), 2);
+        room.makeMove(playerOne.getId(), 2);
 
-        var events = gameRoom.getUncommittedEvents();
+        var events = room.getUncommittedEvents();
 
         assertEquals(2, events.size());
         assertInstanceOf(MoveMadeEvent.class, events.get(1));
@@ -68,12 +68,12 @@ public class GameRoomTest {
     void shouldMarkPlayerAsLeftAndCreateEvent() {
         Player playerOne = new Player("Alice");
         Player playerTwo = new Player("Bob");
-        GameRoom gameRoom = new GameRoom(new RoomId("room-1"), playerOne);
-        gameRoom.addPlayer(playerTwo);
+        Room room = new Room(new RoomId("room-1"), playerOne);
+        room.addPlayer(playerTwo);
 
-        gameRoom.playerLeftTable(playerOne.getId());
+        room.playerLeftTable(playerOne.getId());
 
-        var events = gameRoom.getUncommittedEvents();
+        var events = room.getUncommittedEvents();
 
         assertEquals(2, events.size());
         assertInstanceOf(PlayerLeftTableEvent.class,  events.get(1));
@@ -86,13 +86,13 @@ public class GameRoomTest {
     void shouldReturnAbsentPlayerAndCreateEvent() {
         Player playerOne = new Player("Alice");
         Player  playerTwo = new Player("Bob");
-        GameRoom gameRoom = new GameRoom(new RoomId("room-1"), playerOne);
-        gameRoom.addPlayer(playerTwo);
-        gameRoom.playerLeftTable(playerOne.getId());
+        Room room = new Room(new RoomId("room-1"), playerOne);
+        room.addPlayer(playerTwo);
+        room.playerLeftTable(playerOne.getId());
 
-        gameRoom.playerReturned(playerOne.getId());
+        room.playerReturned(playerOne.getId());
 
-        var events = gameRoom.getUncommittedEvents();
+        var events = room.getUncommittedEvents();
 
         assertEquals(3, events.size());
         assertInstanceOf(PlayerReturnedEvent.class, events.get(2));
@@ -104,7 +104,7 @@ public class GameRoomTest {
     @Test
     void shouldThrowExceptionWhenReturningPlayerNotInRoom() {
         Player playerOne = new Player("Alice");
-        GameRoom room = new GameRoom(new RoomId("room-1"), playerOne);
+        Room room = new Room(new RoomId("room-1"), playerOne);
 
         PlayerId unknownPlayer = new PlayerId("unknown-player");
 
@@ -115,7 +115,7 @@ public class GameRoomTest {
     void shouldThrowExceptionWhenPlayerWasNotAbsent() {
         Player playerOne = new Player("Alice");
         Player playerTwo = new Player("Bob");
-        GameRoom room = new GameRoom(new RoomId("room-1"), playerOne);
+        Room room = new Room(new RoomId("room-1"), playerOne);
         room.addPlayer(playerTwo);
 
         assertThrows(InvalidGameStateException.class, () -> room.playerReturned(playerOne.getId()));
@@ -126,7 +126,7 @@ public class GameRoomTest {
         Player playerOne = new Player("Alice");
         Player playerTwo = new Player("Bob");
         Player playerThree = new Player("Charlie");
-        GameRoom room = new GameRoom(new RoomId("room-1"), playerOne);
+        Room room = new Room(new RoomId("room-1"), playerOne);
         room.addPlayer(playerTwo);
         room.playerLeftTable(playerTwo.getId());
 
@@ -136,7 +136,7 @@ public class GameRoomTest {
     @Test
     void shouldReturnTrueWhenInactivityTimeoutExceeded() {
         Player player = new Player("Alice");
-        GameRoom room = new GameRoom(new RoomId("room-1"), player);
+        Room room = new Room(new RoomId("room-1"), player);
 
         Instant future = Instant.now().plus(Duration.ofMinutes(6));
 
@@ -148,7 +148,7 @@ public class GameRoomTest {
     @Test
     void shouldReturnFalseWhenInactivityTimeoutNotExceeded() {
         Player player = new Player("Alice");
-        GameRoom room = new GameRoom(new RoomId("room-1"), player);
+        Room room = new Room(new RoomId("room-1"), player);
 
         Instant future = Instant.now().plus(Duration.ofMinutes(2));
 
@@ -160,7 +160,7 @@ public class GameRoomTest {
     @Test
     void shouldReturnFalseWhenPlayerNeverLeft() {
         Player player = new Player("Alice");
-        GameRoom room = new GameRoom(new RoomId("room-1"), player);
+        Room room = new Room(new RoomId("room-1"), player);
 
         boolean result = room.hasReconnectTimedOut(Instant.now());
 
@@ -170,7 +170,7 @@ public class GameRoomTest {
     @Test
     void shouldReturnFalseWhenReconnectGracePeriodNotExceeded() {
         Player player = new Player("Alice");
-        GameRoom room = new GameRoom(new RoomId("room-1"), player);
+        Room room = new Room(new RoomId("room-1"), player);
 
         room.playerLeftTable(player.getId());
 
@@ -184,7 +184,7 @@ public class GameRoomTest {
     @Test
     void shouldReturnTrueWhenReconnectGracePeriodExceeded() {
         Player player = new Player("Alice");
-        GameRoom room = new GameRoom(new RoomId("room-1"), player);
+        Room room = new Room(new RoomId("room-1"), player);
 
         room.playerLeftTable(player.getId());
 
@@ -198,7 +198,7 @@ public class GameRoomTest {
     @Test
     void shouldForceForfeitAndCreateEvent() {
         Player playerOne = new Player("Alice");
-        GameRoom room = new GameRoom(new RoomId("room-1"), playerOne);
+        Room room = new Room(new RoomId("room-1"), playerOne);
 
         room.forceForfeit(playerOne.getId(), "Disconnected too long");
 
@@ -216,7 +216,7 @@ public class GameRoomTest {
     void shouldReturnEventsAndClearThem() {
         Player playerOne = new Player("Alice");
         Player playerTwo = new Player("Bob");
-        GameRoom room = new GameRoom(new RoomId("room-1"), playerOne);
+        Room room = new Room(new RoomId("room-1"), playerOne);
 
         room.addPlayer(playerTwo);
 
@@ -230,7 +230,7 @@ public class GameRoomTest {
     @Test
     void shouldReturnEmptyListWhenNoEventsExist() {
         Player playerOne = new Player("Alice");
-        GameRoom room = new GameRoom(new RoomId("room-1"), playerOne);
+        Room room = new Room(new RoomId("room-1"), playerOne);
 
         List<DomainEvent> events = room.getUncommittedEvents();
 
@@ -242,7 +242,7 @@ public class GameRoomTest {
     void shouldHandleMultipleCallsCorrectly() {
         Player playerOne = new Player("Alice");
         Player playerTwo = new Player("Bob");
-        GameRoom room = new GameRoom(new RoomId("room-1"), playerOne);
+        Room room = new Room(new RoomId("room-1"), playerOne);
 
         room.addPlayer(playerTwo);
 

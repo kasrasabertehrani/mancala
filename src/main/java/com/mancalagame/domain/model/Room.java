@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 
 @Getter
-public class GameRoom {
+public class Room {
     private final RoomId roomId;
     private final Game game;
     private final Map<PlayerId, Player> players;
@@ -26,7 +26,7 @@ public class GameRoom {
     private static final Duration INACTIVITY_TIMEOUT = Duration.ofMinutes(5);
     private static final Duration RECONNECT_GRACE_PERIOD = Duration.ofSeconds(30);
 
-    public GameRoom(RoomId roomId, Player playerOne) {
+    public Room(RoomId roomId, Player playerOne) {
         this.roomId = roomId;
         this.game = new Game(playerOne);
         this.players = new ConcurrentHashMap<>();
