@@ -175,6 +175,7 @@
                     <excludes>
                         <exclude>com/mancalagame/domain/exception/**</exclude>
                         <exclude>com/mancalagame/domain/event/**</exclude>
+                        <exclude>**/*Application*</exclude>
                     </excludes>
                 </configuration>
                 <executions>
