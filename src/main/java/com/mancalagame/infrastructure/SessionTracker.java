@@ -40,16 +40,4 @@ public class SessionTracker {
         }
     }
 
-    public void removeSessionsByRoomId(String roomId) {
-        List<String> sessionsToRemove = new ArrayList<>();
-        sessionToRoom.forEach((sessionId, room) -> {
-            if (room.equals(roomId)) {
-                sessionsToRemove.add(sessionId);
-            }
-        });
-
-        for (String sessionId : sessionsToRemove) {
-            removeSession(sessionId);
-        }
-    }
 }

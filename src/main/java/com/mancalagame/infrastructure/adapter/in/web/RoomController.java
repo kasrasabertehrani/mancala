@@ -31,7 +31,7 @@ public class RoomController {
     @Operation(summary = "Create room")
     @ApiResponse(responseCode = "201", description = "Room created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid request")
-    @PostMapping("/create")
+    @PostMapping
     public ResponseEntity<RoomResponse> createRoom(@Valid @RequestBody CreateRoomRequest request) {
         Player host = new Player(request.getPlayerName());
         Room newRoom = roomService.createRoom(host);
