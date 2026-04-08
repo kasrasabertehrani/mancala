@@ -1,6 +1,6 @@
 package com.mancalagame.infrastructure.adapter.in.websocket;
 
-import com.mancalagame.application.service.GameService;
+import com.mancalagame.application.port.in.GameUseCase;
 import com.mancalagame.domain.exception.DomainException;
 import com.mancalagame.domain.model.vo.PlayerId;
 import com.mancalagame.domain.model.vo.RoomId;
@@ -19,10 +19,10 @@ import org.springframework.stereotype.Controller;
 @Controller
 public class GameController {
 
-    private final GameService gameService;
+    private final GameUseCase gameService;
     private final SessionTracker sessionTracker;
 
-    public GameController(GameService gameService, SessionTracker sessionTracker) {
+    public GameController(GameUseCase gameService, SessionTracker sessionTracker) {
         this.gameService = gameService;
         this.sessionTracker = sessionTracker;
     }

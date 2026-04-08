@@ -6,7 +6,7 @@ import com.mancalagame.domain.model.vo.RoomId;
 import java.util.Collection;
 import java.util.Optional;
 
-public interface GameRoomRepositoryPort {
+public interface RoomRepositoryPort {
 
     void save(Room room);
 

@@ -1,10 +1,10 @@
 package com.mancalagame.infrastructure.adapter.in.web;
 
+import com.mancalagame.application.port.in.RoomUseCase;
 import com.mancalagame.domain.model.Room;
 import com.mancalagame.domain.model.Player;
 import com.mancalagame.infrastructure.adapter.in.web.payload.request.CreateRoomRequest;
 import com.mancalagame.infrastructure.adapter.in.web.payload.request.JoinRoomRequest;
-import com.mancalagame.application.service.RoomService;
 import com.mancalagame.infrastructure.adapter.in.web.payload.response.RoomResponse;
 import com.mancalagame.infrastructure.adapter.in.web.payload.mapper.RoomResponseMapper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,9 +22,9 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Rooms", description = "Game room management API")
 public class RoomController {
 
-    private final RoomService roomService;
+    private final RoomUseCase roomService;
 
-    public RoomController(RoomService roomService) {
+    public RoomController(RoomUseCase roomService) {
         this.roomService = roomService;
     }
 

@@ -1,7 +1,8 @@
 package com.mancalagame.application.service;
 
+import com.mancalagame.application.port.in.RoomUseCase;
 import com.mancalagame.application.port.out.DomainEventPublisherPort;
-import com.mancalagame.application.port.out.GameRoomRepositoryPort;
+import com.mancalagame.application.port.out.RoomRepositoryPort;
 import com.mancalagame.domain.event.DomainEvent;
 import com.mancalagame.domain.exception.RoomNotFoundException;
 import com.mancalagame.domain.model.Room;
@@ -13,14 +14,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 
 @Service
-public class RoomService {
+public class RoomService implements RoomUseCase {
 
-    private final GameRoomRepositoryPort roomRepository;
+    private final RoomRepositoryPort roomRepository;
     private final DomainEventPublisherPort eventPublisher;
 
     private final AtomicInteger roomCounter = new AtomicInteger(1);
 
-    public RoomService(GameRoomRepositoryPort roomRepository, DomainEventPublisherPort eventPublisher) {
+    public RoomService(RoomRepositoryPort roomRepository, DomainEventPublisherPort eventPublisher) {
         this.roomRepository = roomRepository;
         this.eventPublisher = eventPublisher;
     }

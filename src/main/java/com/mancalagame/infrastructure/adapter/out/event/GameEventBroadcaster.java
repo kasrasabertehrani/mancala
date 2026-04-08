@@ -1,7 +1,7 @@
 package com.mancalagame.infrastructure.adapter.out.event;
 
 import com.mancalagame.domain.event.DomainEvent;
-import com.mancalagame.application.port.out.GameRoomRepositoryPort;
+import com.mancalagame.application.port.out.RoomRepositoryPort;
 import com.mancalagame.domain.model.vo.RoomId;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -12,9 +12,9 @@ import org.springframework.stereotype.Component;
 public class GameEventBroadcaster {
 
     private final SimpMessagingTemplate messagingTemplate;
-    private final GameRoomRepositoryPort roomRepository;
+    private final RoomRepositoryPort roomRepository;
 
-    public GameEventBroadcaster(SimpMessagingTemplate messagingTemplate, GameRoomRepositoryPort roomRepository) {
+    public GameEventBroadcaster(SimpMessagingTemplate messagingTemplate, RoomRepositoryPort roomRepository) {
         this.messagingTemplate = messagingTemplate;
         this.roomRepository = roomRepository;
     }
