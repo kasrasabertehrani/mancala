@@ -10,7 +10,7 @@ const gameScreen = document.getElementById('game-screen');
 const roomDisplay = document.getElementById('room-display');
 const statusDisplay = document.getElementById('status-display');
 
-// --- CHECK FOR SAVED SESSION ON PAGE LOAD ---
+
 
 window.addEventListener('load', () => {
     const savedSession = localStorage.getItem('mancalaSession');
@@ -46,7 +46,7 @@ async function reconnectToGame(roomId, playerId, pNum) {
     }
 }
 
-// --- REST API CALLS LOBBY ---
+
 
 document.getElementById('btn-create').addEventListener('click', async (event) => {
     event.preventDefault();
@@ -117,9 +117,7 @@ document.getElementById('btn-join').addEventListener('click', async (event) => {
     }
 });
 
-// --- WEBSOCKET ---
 
-// Added isReconnecting as the 5th parameter, defaults to false
 function joinWebSocket(roomId, playerId, pNum, initialGameState, isReconnecting = false) {
     myPlayerId = playerId;
     currentRoomId = roomId;
@@ -149,7 +147,7 @@ function joinWebSocket(roomId, playerId, pNum, initialGameState, isReconnecting 
             updateBoard(gameData);
         });
 
-        // CHANNEL B: The Event Channel (Listens for captures and free turns)
+
         stompClient.subscribe('/topic/room/' + roomId + '/events', (message) => {
             const eventData = JSON.parse(message.body);
 
@@ -163,7 +161,7 @@ function joinWebSocket(roomId, playerId, pNum, initialGameState, isReconnecting 
             }
         });
 
-        // Only shout "reconnect" if the flag is true!
+
         if (isReconnecting) {
             stompClient.send('/app/game.reconnect', {}, JSON.stringify({
                 roomId: currentRoomId,
@@ -208,7 +206,7 @@ function setActiveBoard() {
     }
 }
 
-// --- MAKING A MOVE ---
+
 
 document.addEventListener('click', (event) => {
     const pitElement = event.target.closest('.pit');
@@ -230,7 +228,7 @@ document.addEventListener('click', (event) => {
     }));
 });
 
-// --- HIGHLIGHT MY PITS ---
+
 
 function highlightMyPits() {
     const activeBoard = document.getElementById(activeBoardId);
@@ -257,7 +255,7 @@ function highlightMyPits() {
     });
 }
 
-// --- UPDATING THE SCREEN ---
+
 
 function updateBoard(gameData) {
     const pits = gameData.board.pits;
@@ -320,7 +318,7 @@ function disableAllPits() {
         pit.classList.remove('active');
     });
 }
-    // --- NOTIFICATIONS ---
+
 
 function showActionNotification(message, typeClass) {
         const container = document.getElementById('notification-container');
