@@ -88,7 +88,6 @@ public class GameService implements GameUseCase {
                 }
             }
         }
-
         return timedOutRooms;
     }
 
