@@ -1,0 +1,143 @@
+asyncapi: 2.4.0
+info:
+  title: Mancala Online WebSocket API
+  version: 1.0.0
+  description: The real-time event-driven STOMP API for the Mancala Game Domain.
+servers:
+  local:
+    url: ws://localhost:8080/mancala-ws
+    protocol: ws
+    description: Local development STOMP endpoint (requires SockJS fallback if accessed via browser).
+
+channels:
+  # ---------------------------------------------------------
+  # DESTINATIONS (Where the client SENDS messages)
+  # ---------------------------------------------------------
+  /app/game.move:
+    description: Endpoint to execute a player's turn.
+    publish:
+      summary: Send a move command
+      message:
+        $ref: '#/components/messages/PlayPitCommand'
+
+  /app/game.reconnect:
+    description: Endpoint to re-establish presence after a network drop.
+    publish:
+      summary: Send a reconnect command
+      message:
+        $ref: '#/components/messages/ReconnectRequest'
+
+  # ---------------------------------------------------------
+  # SUBSCRIPTIONS (Where the client LISTENS for messages)
+  # ---------------------------------------------------------
+  /topic/room/{roomId}:
+    description: Broadcasts the complete game state.
+    parameters:
+      roomId:
+        description: The unique identifier of the room.
+        schema:
+          type: string
+    subscribe:
+      summary: Receive full game state updates
+      message:
+        $ref: '#/components/messages/RoomStateBroadcast'
+
+  /topic/room/{roomId}/events:
+    description: Broadcasts specific Domain Events for UI animations (e.g., captures, free turns).
+    parameters:
+      roomId:
+        schema:
+          type: string
+    subscribe:
+      summary: Receive domain event notifications
+      message:
+        $ref: '#/components/messages/DomainEventBroadcast'
+
+components:
+  messages:
+    PlayPitCommand:
+      name: PlayPitCommand
+      title: Play Pit Command
+      payload:
+        type: object
+        required: [roomId, playerId, pitIndex]
+        properties:
+          roomId:
+            type: string
+            example: "123"
+          playerId:
+            type: string
+            description: The UUID of the player making the move.
+            example: "550e8400-e29b-41d4-a716-446655440000"
+          pitIndex:
+            type: integer
+            description: The index of the pit (0-13) the player is picking up.
+            example: 4
+
+    ReconnectRequest:
+      name: ReconnectRequest
+      title: Reconnect Request
+      payload:
+        type: object
+        required: [roomId, playerId]
+        properties:
+          roomId:
+            type: string
+          playerId:
+            type: string
+
+    RoomStateBroadcast:
+      name: GameState
+      title: Complete Game State
+      summary: The broadcasted Game.java entity state.
+      payload:
+        type: object
+        properties:
+          gameStatus:
+            type: string
+            description: The current lifecycle phase of the game.
+            enum:
+              - WAITING_FOR_PLAYER_2
+              - PLAYER_1_TURN
+              - PLAYER_2_TURN
+              - MATCH_SUSPENDED
+              - GAME_OVER
+              - FORFEIT
+          player1:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+          player2:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+          board:
+            type: object
+            description: Contains the array of 14 pits and their stone counts.
+          winner:
+            type: string
+            description: The ID of the winning player, or "DRAW" if tied.
+
+    DomainEventBroadcast:
+      name: DomainEvent
+      title: Domain Event (e.g., MoveMadeEvent)
+      payload:
+        type: object
+        properties:
+          playerId:
+            type: string
+          pitIndex:
+            type: integer
+          captureOccurred:
+            type: boolean
+          freeTurnGranted:
+            type: boolean
+          occurredOn:
+            type: string
+            format: date-time
