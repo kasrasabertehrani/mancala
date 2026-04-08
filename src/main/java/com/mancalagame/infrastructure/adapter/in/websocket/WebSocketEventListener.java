@@ -1,7 +1,7 @@
 
 package com.mancalagame.infrastructure.adapter.in.websocket;
 
-import com.mancalagame.application.service.GameService;
+import com.mancalagame.application.port.in.GameUseCase;
 import com.mancalagame.domain.model.vo.PlayerId;
 import com.mancalagame.domain.model.vo.RoomId;
 import com.mancalagame.infrastructure.SessionTracker;
@@ -14,9 +14,9 @@ import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 public class WebSocketEventListener {
 
     private final SessionTracker sessionTracker;
-    private final GameService gameService;
+    private final GameUseCase gameService;
 
-    public WebSocketEventListener(SessionTracker sessionTracker, GameService gameService) {
+    public WebSocketEventListener(SessionTracker sessionTracker, GameUseCase gameService) {
         this.sessionTracker = sessionTracker;
         this.gameService = gameService;
     }

@@ -1,6 +1,6 @@
 package com.mancalagame.infrastructure.adapter.in.scheduler;
 
-import com.mancalagame.application.service.GameService;
+import com.mancalagame.application.port.in.GameUseCase;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -8,9 +8,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class GameTimeoutScheduler {
 
-    private final GameService gameService;
+    private final GameUseCase gameService;
 
-    public GameTimeoutScheduler(GameService gameService) {
+    public GameTimeoutScheduler(GameUseCase gameService) {
         this.gameService = gameService;
     }
 

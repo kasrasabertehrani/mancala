@@ -1,7 +1,8 @@
 package com.mancalagame.application.service;
 
+import com.mancalagame.application.port.in.GameUseCase;
 import com.mancalagame.application.port.out.DomainEventPublisherPort;
-import com.mancalagame.application.port.out.GameRoomRepositoryPort;
+import com.mancalagame.application.port.out.RoomRepositoryPort;
 import com.mancalagame.domain.event.DomainEvent;
 import com.mancalagame.domain.exception.RoomNotFoundException;
 import com.mancalagame.domain.model.Game;
@@ -16,12 +17,12 @@ import java.util.List;
 
 
 @Service
-public class GameService {
+public class GameService implements GameUseCase {
 
-    private final GameRoomRepositoryPort roomRepository;
+    private final RoomRepositoryPort roomRepository;
     private final DomainEventPublisherPort eventPublisher;
 
-    public GameService(GameRoomRepositoryPort roomRepository, DomainEventPublisherPort eventPublisher) {
+    public GameService(RoomRepositoryPort roomRepository, DomainEventPublisherPort eventPublisher) {
         this.roomRepository = roomRepository;
         this.eventPublisher = eventPublisher;
     }

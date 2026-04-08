@@ -1,6 +1,6 @@
 package com.mancalagame.infrastructure.adapter.out.repository;
 
-import com.mancalagame.application.port.out.GameRoomRepositoryPort;
+import com.mancalagame.application.port.out.RoomRepositoryPort;
 import com.mancalagame.domain.model.Room;
 import com.mancalagame.domain.model.vo.RoomId;
 import org.springframework.stereotype.Repository;
@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 
 @Repository
-public class InMemoryRoomRepositoryAdapter implements GameRoomRepositoryPort {
+public class InMemoryRoomRepositoryAdapter implements RoomRepositoryPort {
 
     private final ConcurrentHashMap<String, Room> rooms = new ConcurrentHashMap<>();
 
