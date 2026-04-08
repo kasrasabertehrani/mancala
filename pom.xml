@@ -23,6 +23,9 @@
         <jacoco.version>0.8.12</jacoco.version>
         <lombok.version>1.18.44</lombok.version>
         <springdoc.version>3.0.1</springdoc.version>
+        <junit.jupiter.version>5.12.2</junit.jupiter.version>
+        <mockito.core.version>5.23.0</mockito.core.version>
+        <mockito.junit.jupiter.version>5.23.0</mockito.junit.jupiter.version>
 
         <sonar.projectKey>kasrasabertehrani_mancala</sonar.projectKey>
         <sonar.organization>kasrasabertehrani</sonar.organization>
@@ -75,6 +78,27 @@
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>${springdoc.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>${mockito.core.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>${mockito.junit.jupiter.version}</version>
+            <scope>test</scope>
         </dependency>
       
     </dependencies>
