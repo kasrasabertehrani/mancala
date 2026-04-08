@@ -32,6 +32,15 @@ jobs:
       - name: Run Maven tests
         run: ./mvnw clean verify
 
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          files: ./target/site/jacoco/jacoco.xml
+          fail_ci_if_error: true
+          verbose: true
+
       - name: Verify Docker image builds
         run: docker build -t mancala:test .
 
