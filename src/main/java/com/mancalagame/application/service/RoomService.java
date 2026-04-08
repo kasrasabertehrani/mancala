@@ -46,7 +46,6 @@ public class RoomService {
                 eventPublisher.publish(event);
             }
         }
-
         return room;
     }
 

@@ -1,4 +1,4 @@
-package com.mancalagame.infrastructure.adapter.in.web.payload;
+package com.mancalagame.infrastructure.adapter.in.web.payload.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;

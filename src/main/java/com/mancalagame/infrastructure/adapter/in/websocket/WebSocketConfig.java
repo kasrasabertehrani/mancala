@@ -1,4 +1,4 @@
-package com.mancalagame.infrastructure.config;
+package com.mancalagame.infrastructure.adapter.in.websocket;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
