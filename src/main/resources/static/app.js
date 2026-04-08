@@ -59,7 +59,7 @@ document.getElementById('btn-create').addEventListener('click', async (event) =>
     btn.innerText = "Creating...";
 
     try {
-        const response = await fetch('/api/rooms/create', {
+        const response = await fetch('/api/rooms', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ playerName: playerName })

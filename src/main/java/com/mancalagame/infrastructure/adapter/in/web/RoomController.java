@@ -20,7 +20,7 @@ public class RoomController {
         this.roomService = roomService;
     }
 
-    @PostMapping("/create")
+    @PostMapping
     public ResponseEntity<Room> createRoom(@Valid @RequestBody CreateRoomRequest request) {
         Player host = new Player(request.getPlayerName());
         Room newRoom = roomService.createRoom(host);
