@@ -1,6 +1,6 @@
 # Mancala Online
 
-![Java](https://img.shields.io/badge/Java-17-blue?logo=java) ![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.x-brightgreen?logo=spring-boot) ![Docker](https://img.shields.io/badge/Docker-Multi--Stage-2CA5E0?logo=docker&logoColor=white) ![GitHub Actions](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?logo=github-actions&logoColor=white) ![GHCR](https://img.shields.io/badge/Registry-GHCR-lightgrey?logo=github) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=kasrasabertehrani_mancala&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=kasrasabertehrani_mancala)
+![Java](https://img.shields.io/badge/Java-17-blue?logo=java) ![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.x-brightgreen?logo=spring-boot) ![Docker](https://img.shields.io/badge/Docker-Multi--Stage-2CA5E0?logo=docker&logoColor=white) ![GitHub Actions](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?logo=github-actions&logoColor=white) ![GHCR](https://img.shields.io/badge/Registry-GHCR-lightgrey?logo=github) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=kasrasabertehrani_mancala&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=kasrasabertehrani_mancala) [![codecov](https://codecov.io/github/kasrasabertehrani/mancala/graph/badge.svg?token=B28F3F7W4W)](https://codecov.io/github/kasrasabertehrani/mancala)
 
 An online version of the classic board game **Mancala**.
 
