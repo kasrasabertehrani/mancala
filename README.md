@@ -1,6 +1,6 @@
 # Mancala Online
 
-![Java](https://img.shields.io/badge/Java-17-blue?logo=java) ![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.x-brightgreen?logo=spring-boot) ![Docker](https://img.shields.io/badge/Docker-Multi--Stage-2CA5E0?logo=docker&logoColor=white) ![GitHub Actions](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?logo=github-actions&logoColor=white) ![GHCR](https://img.shields.io/badge/Registry-GHCR-lightgrey?logo=github) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=kasrasabertehrani_mancala&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=kasrasabertehrani_mancala)
+![Java](https://img.shields.io/badge/Java-17-blue?logo=java) ![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.x-brightgreen?logo=spring-boot) ![Docker](https://img.shields.io/badge/Docker-Multi--Stage-2CA5E0?logo=docker&logoColor=white) ![GitHub Actions](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?logo=github-actions&logoColor=white) ![GHCR](https://img.shields.io/badge/Registry-GHCR-lightgrey?logo=github) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=kasrasabertehrani_mancala&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=kasrasabertehrani_mancala)
 
 An online version of the classic board game **Mancala**.
 
@@ -35,7 +35,8 @@ Available at: [http://204.168.162.199:8080](http://204.168.162.199:8080)
 
 Checkout [Mancala Rules](https://www.scholastic.com/content/dam/teachers/blogs/alycia-zimmerman/migrated-files/mancala_rules.pdf)
 
-![Animation](https://github.com/user-attachments/assets/eb1c4f97-71a5-4f98-a144-4dad93e69bd0)
+![Animation](https://github.com/user-attachments/assets/998e9468-a0a5-4526-9fc3-1e737256e7eb)
+
 
 
 ## Architecture & Design Patterns
