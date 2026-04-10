@@ -1,6 +1,7 @@
 package com.mancalagame.application.service;
 
 import com.mancalagame.application.port.out.DomainEventPublisherPort;
+import com.mancalagame.application.port.out.RoomLockPort;
 import com.mancalagame.application.port.out.RoomRepositoryPort;
 import com.mancalagame.domain.event.DomainEvent;
 import com.mancalagame.domain.exception.RoomNotFoundException;
@@ -30,6 +31,9 @@ class RoomServiceTest {
     private DomainEventPublisherPort eventPublisher;
 
     @Mock
+    private RoomLockPort roomLock;
+
+    @Mock
     private Room room;
 
     @Mock
@@ -45,7 +49,11 @@ class RoomServiceTest {
 
     @BeforeEach
     void setUp() {
-        roomService = new RoomService(roomRepository, eventPublisher);
+        lenient().when(roomLock.executeWithLock(any(), any())).thenAnswer(invocation -> {
+            RoomLockPort.LockableOperation<?> operation = invocation.getArgument(1);
+            return operation.execute();
+        });
+        roomService = new RoomService(roomRepository, eventPublisher, roomLock);
     }
 
     @Test
