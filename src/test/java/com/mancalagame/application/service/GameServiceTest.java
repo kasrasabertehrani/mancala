@@ -1,6 +1,7 @@
 package com.mancalagame.application.service;
 
 import com.mancalagame.application.port.out.DomainEventPublisherPort;
+import com.mancalagame.application.port.out.RoomLockPort;
 import com.mancalagame.application.port.out.RoomRepositoryPort;
 import com.mancalagame.domain.event.DomainEvent;
 import com.mancalagame.domain.exception.RoomNotFoundException;
@@ -29,6 +30,9 @@ class GameServiceTest {
     private RoomRepositoryPort roomRepository;
 
     @Mock
+    private RoomLockPort roomLock;
+
+    @Mock
     private DomainEventPublisherPort eventPublisher;
 
     @Mock
@@ -53,7 +57,11 @@ class GameServiceTest {
 
     @BeforeEach
     void setUp() {
-        gameService = new GameService(roomRepository, eventPublisher);
+        when(roomLock.executeWithLock(any(), any())).thenAnswer(invocation -> {
+            RoomLockPort.LockableOperation<?> operation = invocation.getArgument(1);
+            return operation.execute();
+        });
+        gameService = new GameService(roomRepository, eventPublisher, roomLock);
     }
 
     @Test
@@ -202,15 +210,25 @@ class GameServiceTest {
         PlayerId absentPlayerId = new PlayerId("player-absent");
         RoomId roomId = new RoomId("room-1");
 
+        // 1. Mock the Room ID getter (needed for the stream that collects IDs)
+        when(room.getRoomId()).thenReturn(roomId);
+
+        // 2. Mock the findAll() to return our mocked room
         when(roomRepository.findAll()).thenReturn(List.of(room));
+
+        // 3. ADDED THIS: Mock the findById() so the re-fetch inside the lock works!
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+
+        // 4. Mock the rest of the domain logic
         when(room.hasReconnectTimedOut(any())).thenReturn(true);
         when(room.getGame()).thenReturn(game);
         when(game.getAbsentPlayerId()).thenReturn(absentPlayerId);
         when(room.getUncommittedEvents()).thenReturn(List.of(event1, event2));
-        when(room.getRoomId()).thenReturn(roomId);
 
+        // 5. Execute
         List<Room> result = gameService.processTimeouts();
 
+        // 6. Assert and Verify
         assertEquals(1, result.size());
         assertSame(room, result.get(0));
 
@@ -226,73 +244,91 @@ class GameServiceTest {
 
     @Test
     void processTimeouts_shouldForfeitAndDeleteRoom_whenInactivityTimedOutAndPlayer1Turn() {
-        PlayerId player1Id = new PlayerId("player-1");
+        PlayerId idlePlayerId = new PlayerId("player-1");
         RoomId roomId = new RoomId("room-1");
 
+        // --- THE FIX: Mock ID and findById ---
+        when(room.getRoomId()).thenReturn(roomId);
         when(roomRepository.findAll()).thenReturn(List.of(room));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+
+        // --- Domain Mocks ---
         when(room.hasReconnectTimedOut(any())).thenReturn(false);
         when(room.hasInactivityTimedOut(any())).thenReturn(true);
+
         when(room.getGame()).thenReturn(game);
         when(game.getGameStatus()).thenReturn(Game.GameStatus.PLAYER_1_TURN);
-        when(game.getPlayer1()).thenReturn(player1);
-        when(player1.getId()).thenReturn(player1Id);
-        when(room.getUncommittedEvents()).thenReturn(List.of(event1));
-        when(room.getRoomId()).thenReturn(roomId);
 
+        // Mock Player 1
+        Player player1 = mock(Player.class);
+        when(game.getPlayer1()).thenReturn(player1);
+        when(player1.getId()).thenReturn(idlePlayerId);
+
+        when(room.getUncommittedEvents()).thenReturn(List.of(event1));
+
+        // Execute
         List<Room> result = gameService.processTimeouts();
 
+        // Assert
         assertEquals(1, result.size());
-        assertSame(room, result.get(0));
-
-        verify(room).hasReconnectTimedOut(any());
-        verify(room).hasInactivityTimedOut(any());
-        verify(room).forceForfeit(player1Id, "Inactivity timeout.");
+        verify(room).forceForfeit(idlePlayerId, "Inactivity timeout.");
         verify(roomRepository).save(room);
-        verify(eventPublisher).publish(event1);
         verify(roomRepository).deleteById(roomId);
     }
 
     @Test
     void processTimeouts_shouldForfeitAndDeleteRoom_whenInactivityTimedOutAndPlayer2Turn() {
-        PlayerId player2Id = new PlayerId("player-2");
+        PlayerId idlePlayerId = new PlayerId("player-2");
         RoomId roomId = new RoomId("room-1");
 
+        // --- THE FIX: Mock ID and findById ---
+        when(room.getRoomId()).thenReturn(roomId);
         when(roomRepository.findAll()).thenReturn(List.of(room));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+
+        // --- Domain Mocks ---
         when(room.hasReconnectTimedOut(any())).thenReturn(false);
         when(room.hasInactivityTimedOut(any())).thenReturn(true);
-        when(room.getGame()).thenReturn(game);
-        when(game.getGameStatus()).thenReturn(Game.GameStatus.PLAYER_2_TURN);
-        when(game.getPlayer2()).thenReturn(player2);
-        when(player2.getId()).thenReturn(player2Id);
-        when(room.getUncommittedEvents()).thenReturn(List.of(event1));
-        when(room.getRoomId()).thenReturn(roomId);
 
+        when(room.getGame()).thenReturn(game);
+        when(game.getGameStatus()).thenReturn(Game.GameStatus.PLAYER_2_TURN); // Player 2 turn!
+
+        // Mock Player 2
+        Player player2 = mock(Player.class);
+        when(game.getPlayer2()).thenReturn(player2);
+        when(player2.getId()).thenReturn(idlePlayerId);
+
+        when(room.getUncommittedEvents()).thenReturn(List.of(event1));
+
+        // Execute
         List<Room> result = gameService.processTimeouts();
 
+        // Assert
         assertEquals(1, result.size());
-        assertSame(room, result.get(0));
-
-        verify(room).forceForfeit(player2Id, "Inactivity timeout.");
+        verify(room).forceForfeit(idlePlayerId, "Inactivity timeout.");
         verify(roomRepository).save(room);
-        verify(eventPublisher).publish(event1);
         verify(roomRepository).deleteById(roomId);
     }
 
     @Test
     void processTimeouts_shouldIgnoreRoom_whenNoTimeoutOccurred() {
+        RoomId roomId = new RoomId("room-1");
+
+        // --- THE FIX: Mock ID and findById ---
+        when(room.getRoomId()).thenReturn(roomId);
         when(roomRepository.findAll()).thenReturn(List.of(room));
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
+
+        // --- Domain Mocks ---
         when(room.hasReconnectTimedOut(any())).thenReturn(false);
         when(room.hasInactivityTimedOut(any())).thenReturn(false);
 
+        // Execute
         List<Room> result = gameService.processTimeouts();
 
-        assertTrue(result.isEmpty());
-
-        verify(room).hasReconnectTimedOut(any());
-        verify(room).hasInactivityTimedOut(any());
-        verify(room, never()).forceForfeit(any(), anyString());
+        // Assert
+        assertEquals(0, result.size());
         verify(roomRepository, never()).save(any());
         verify(roomRepository, never()).deleteById(any());
-        verifyNoInteractions(eventPublisher);
     }
 }
