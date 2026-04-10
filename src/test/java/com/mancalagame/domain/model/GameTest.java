@@ -283,7 +283,7 @@ class GameTest {
         game.playTurn(playerOne.getId(), 0);
 
         PlayerId playerTwoId = playerTwo.getId();
-        assertThrows(InvalidGameStateException.class, () -> game.playTurn(playerTwo.getId(), 0));
+        assertThrows(InvalidGameStateException.class, () -> game.playTurn(playerTwoId, 0));
     }
 
     @Test
