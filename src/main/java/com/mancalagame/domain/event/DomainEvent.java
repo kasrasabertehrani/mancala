@@ -12,7 +12,7 @@ public abstract class DomainEvent {
     private final RoomId roomId;
     private final Instant occurredOn;
 
-    public DomainEvent(RoomId roomId) {
+    DomainEvent(RoomId roomId) {
         this.roomId = roomId;
         this.occurredOn = Instant.now();
     }
