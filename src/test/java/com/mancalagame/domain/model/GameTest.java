@@ -2,6 +2,7 @@ package com.mancalagame.domain.model;
 
 import com.mancalagame.domain.exception.InvalidGameStateException;
 import com.mancalagame.domain.exception.InvalidPlayerException;
+import com.mancalagame.domain.model.vo.PlayerId;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -189,7 +190,8 @@ class GameTest {
         Player playerOne = new Player("Alice");
         Game game = new Game(playerOne);
 
-        assertThrows(InvalidGameStateException.class, () -> game.playTurn(playerOne.getId(), 0));
+        PlayerId playerOneId = playerOne.getId();
+        assertThrows(InvalidGameStateException.class, () -> game.playTurn(playerOneId, 0));
     }
 
     @Test
@@ -208,7 +210,8 @@ class GameTest {
         game.getBoard().getPits()[6].setStones(23);
         game.playTurn(playerOne.getId(), 5);
 
-        assertThrows(InvalidGameStateException.class, () -> game.playTurn(playerOne.getId(), 0));
+        PlayerId playerOneId = playerOne.getId();
+        assertThrows(InvalidGameStateException.class, () -> game.playTurn(playerOneId, 0));
     }
 
     @Test
@@ -219,7 +222,8 @@ class GameTest {
         game.setPlayer2(playerTwo);
         game.forfeit(playerOne.getId());
 
-        assertThrows(InvalidGameStateException.class, () -> game.playTurn(playerOne.getId(), 0));
+        PlayerId playerOneId = playerOne.getId();
+        assertThrows(InvalidGameStateException.class, () -> game.playTurn(playerOneId, 0));
     }
 
     @Test
@@ -230,7 +234,8 @@ class GameTest {
         game.setPlayer2(playerTwo);
         game.markPlayerAbsent(playerTwo.getId());
 
-        assertThrows(InvalidGameStateException.class, () -> game.playTurn(playerOne.getId(), 0));
+        PlayerId playerOneId = playerOne.getId();
+        assertThrows(InvalidGameStateException.class, () -> game.playTurn(playerOneId, 0));
     }
 
     @Test
@@ -241,7 +246,8 @@ class GameTest {
         game.setPlayer2(playerTwo);
         game.playTurn(playerOne.getId(), 0);
 
-        assertThrows(InvalidGameStateException.class, () -> game.playTurn(playerOne.getId(), 1));
+        PlayerId playerOneId = playerOne.getId();
+        assertThrows(InvalidGameStateException.class, () -> game.playTurn(playerOneId, 1));
     }
 
     @Test
@@ -253,7 +259,8 @@ class GameTest {
         game.playTurn(playerOne.getId(), 0);
         game.playTurn(playerTwo.getId(), 7);
 
-        assertThrows(InvalidGameStateException.class, () -> game.playTurn(playerTwo.getId(), 8));
+        PlayerId playerTwoId = playerTwo.getId();
+        assertThrows(InvalidGameStateException.class, () -> game.playTurn(playerTwoId, 8));
     }
 
     @Test
@@ -263,7 +270,8 @@ class GameTest {
         Game game = new Game(playerOne);
         game.setPlayer2(playerTwo);
 
-        assertThrows(InvalidGameStateException.class, () -> game.playTurn(playerOne.getId(), 7));
+        PlayerId playerOneId = playerOne.getId();
+        assertThrows(InvalidGameStateException.class, () -> game.playTurn(playerOneId, 7));
     }
 
     @Test
@@ -274,6 +282,7 @@ class GameTest {
         game.setPlayer2(playerTwo);
         game.playTurn(playerOne.getId(), 0);
 
+        PlayerId playerTwoId = playerTwo.getId();
         assertThrows(InvalidGameStateException.class, () -> game.playTurn(playerTwo.getId(), 0));
     }
 
@@ -295,7 +304,8 @@ class GameTest {
         Game game = new Game(playerOne);
         game.setPlayer2(playerTwo);
 
-        assertThrows(InvalidPlayerException.class, () -> game.playTurn(playerThree.getId(), 0));
+        PlayerId playerThreeId = playerThree.getId();
+        assertThrows(InvalidPlayerException.class, () -> game.playTurn(playerThreeId, 0));
     }
 
     @Test
@@ -307,7 +317,8 @@ class GameTest {
         game.setPlayer2(playerTwo);
         game.playTurn(playerOne.getId(), 0);
 
-        assertThrows(InvalidPlayerException.class, () -> game.playTurn(playerThree.getId(), 0));
+        PlayerId playerThreeId = playerThree.getId();
+        assertThrows(InvalidPlayerException.class, () -> game.playTurn(playerThreeId, 0));
     }
 
     @Test
@@ -350,6 +361,7 @@ class GameTest {
         game.setPlayer2(playerTwo);
         game.getBoard().getPits()[0].setStones(0);
 
-        assertThrows(InvalidGameStateException.class, () -> game.playTurn(playerOne.getId(), 0));
+        PlayerId playerOneId = playerOne.getId();
+        assertThrows(InvalidGameStateException.class, () -> game.playTurn(playerOneId, 0));
     }
 }

@@ -118,7 +118,8 @@ class RoomTest {
         Room room = new Room(new RoomId("room-1"), playerOne);
         room.addPlayer(playerTwo);
 
-        assertThrows(InvalidGameStateException.class, () -> room.playerReturned(playerOne.getId()));
+        PlayerId playerOneId = playerOne.getId();
+        assertThrows(InvalidGameStateException.class, () -> room.playerReturned(playerOneId));
     }
 
     @Test
@@ -130,7 +131,8 @@ class RoomTest {
         room.addPlayer(playerTwo);
         room.playerLeftTable(playerTwo.getId());
 
-        assertThrows(InvalidPlayerException.class, () -> room.playerReturned(playerThree.getId()));
+        PlayerId playerThreeId = playerThree.getId();
+        assertThrows(InvalidPlayerException.class, () -> room.playerReturned(playerThreeId));
     }
 
     @Test
