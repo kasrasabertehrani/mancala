@@ -37,5 +37,4 @@ public class SessionTracker {
             playerToActiveSession.remove(playerId);
         }
     }
-
 }
