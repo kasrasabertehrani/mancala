@@ -10,12 +10,14 @@ import com.mancalagame.domain.model.Game;
 import com.mancalagame.domain.model.Room;
 import com.mancalagame.domain.model.vo.PlayerId;
 import com.mancalagame.domain.model.vo.RoomId;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
 public class GameService implements GameUseCase {
 
@@ -38,10 +40,13 @@ public class GameService implements GameUseCase {
             room.makeMove(playerId, pitIndex);
             roomRepository.save(room);
             publishEvents(room);
+            log.info("event=move_made roomId={} playerId={} pitIndex={} result=ok",
+                    roomId.value(), playerId.value(), pitIndex);
 
             if (room.getGame().getGameStatus() == Game.GameStatus.GAME_OVER) {
                 roomRepository.deleteById(roomId);
                 roomLock.releaseLock(roomId);
+                log.info("event=game_finished roomId={} result=ok reason=game_over", roomId.value());
             }
             return room;
         });
@@ -52,12 +57,16 @@ public class GameService implements GameUseCase {
         return roomLock.executeWithLock(roomId, () -> {
             Room room = roomRepository.findById(roomId).orElse(null);
             if (room == null) {
+                log.warn("event=player_disconnected roomId={} playerId={} result=ignored reason=room_not_found",
+                        roomId.value(), playerId.value());
                 return null;
             }
 
             room.playerLeftTable(playerId);
             roomRepository.save(room);
             publishEvents(room);
+            log.info("event=player_disconnected roomId={} playerId={} result=ok",
+                    roomId.value(), playerId.value());
             return room;
         });
     }
@@ -69,6 +78,8 @@ public class GameService implements GameUseCase {
             room.playerReturned(playerId);
             roomRepository.save(room);
             publishEvents(room);
+            log.info("event=player_reconnected roomId={} playerId={} result=ok",
+                    roomId.value(), playerId.value());
             return room;
         });
     }
@@ -96,11 +107,14 @@ public class GameService implements GameUseCase {
                 }
 
                 if (room.hasReconnectTimedOut(now)) {
-                    room.forceForfeit(room.getGame().getAbsentPlayerId(), "Disconnect grace period expired.");
+                    PlayerId absentPlayerId = room.getGame().getAbsentPlayerId();
+                    room.forceForfeit(absentPlayerId, "Disconnect grace period expired.");
                     roomRepository.save(room);
                     publishEvents(room);
                     timedOutRooms.add(room);
                     roomRepository.deleteById(room.getRoomId());
+                    log.warn("event=timeout_forfeit roomId={} playerId={} reason=disconnect_grace_expired result=ok",
+                            room.getRoomId().value(), absentPlayerId.value());
                 }
                 else if (room.hasInactivityTimedOut(now)) {
                     PlayerId idlePlayerId = (room.getGame().getGameStatus() == Game.GameStatus.PLAYER_1_TURN)
@@ -112,6 +126,8 @@ public class GameService implements GameUseCase {
                     publishEvents(room);
                     timedOutRooms.add(room);
                     roomRepository.deleteById(room.getRoomId());
+                    log.warn("event=timeout_forfeit roomId={} playerId={} reason=inactivity_timeout result=ok",
+                            room.getRoomId().value(), idlePlayerId.value());
                 }
                 return null;
             });
