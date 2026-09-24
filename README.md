@@ -9,13 +9,14 @@ We designed this project to showcase:
 - DevOps practices
 - CI/CD pipelines
 - Deployment process
-- Multi-platform application development
+- Browser-based multiplayer game development
 
 ## Tech Stack
 
 | Area | Technologies |
 | --- | --- |
 | Application | Java 17, Spring Boot 4.x |
+| Web client | HTML, CSS, JavaScript |
 | Communication | HTTP, WebSockets |
 | Architecture | Domain-Driven Design, Hexagonal Architecture |
 | Containerization | Docker with a multi-stage build |
@@ -23,20 +24,28 @@ We designed this project to showcase:
 | Container registry | GitHub Container Registry (GHCR) |
 | Quality reporting | SonarCloud, Codecov |
 
-## Where to play
+## Where to Play
 
 ### Docker
-1. Clone the repository
-3. Navigate to the root directory
-5. Build image and run the container:
+
+With Git installed and Docker running:
+
+1. Clone the repository and enter its root directory:
+
    ```bash
-   git clone https://github.com/yourusername/mancala-game.git
-   
-   cd mancala-game
-   
-   docker build -t mancala-local .
-   docker run -p 8080:8080 mancala-local
+   git clone https://github.com/kasrasabertehrani/mancala.git
+   cd mancala
    ```
+
+2. Build the image and run the container:
+
+   ```bash
+   docker build -t mancala-local .
+   docker run --rm -p 8080:8080 mancala-local
+   ```
+
+3. Open [http://localhost:8080](http://localhost:8080) in your browser.
+
 ## How to Play
 1. Type in your name.
 2. Create room or connect to the existing one by room id.
