@@ -11,11 +11,20 @@ We designed this project to showcase:
 - Deployment process
 - Multi-platform application development
 
-## Where to play
-### Server
-You can play the game right now (while we still pay for the server)
+## Tech Stack
 
-Available at: [http://204.168.162.199:8080](http://204.168.162.199:8080)
+| Area | Technologies |
+| --- | --- |
+| Application | Java 17, Spring Boot 4.x |
+| Communication | HTTP, WebSockets |
+| Architecture | Domain-Driven Design, Hexagonal Architecture |
+| Containerization | Docker with a multi-stage build |
+| CI/CD | GitHub Actions |
+| Container registry | GitHub Container Registry (GHCR) |
+| Quality reporting | SonarCloud, Codecov |
+
+## Where to play
+
 ### Docker
 1. Clone the repository
 3. Navigate to the root directory
@@ -47,4 +56,26 @@ The primary goal of this architecture is to treat the core rules of Mancala as t
 
 * **Domain-Driven Design (The Core):** The pure rules of the game are completely encapsulated within the domain. The domain dictates exactly how Mancala is played and validates every move, but it is intentionally "blind" to the outside world. It knows absolutely nothing about WebSockets, HTTP requests, or whether the game is being played on a web browser or a mobile app. 
 * **Hexagonal Architecture (The Adapters):** The Spring Boot controllers and WebSocket handlers act as protective boundary layers (Adapters) around the core domain. They translate messy external network traffic into pure commands the domain understands, and they listen for internal domain events to translate back out to the network. 
+
+## Contribution
+
+### Kasra Sabertehrani — Software Design & Game Development
+
+I was primarily responsible for the design and development of the game application, including:
+
+- Structuring the application around domain models, use-case interfaces, and infrastructure adapters.
+- Implementing Mancala gameplay: move validation, stone distribution, captures, extra turns, scoring, and game completion.
+- Developing room management and the disconnect, reconnect, and timeout logic.
+- Implementing the browser-based game interface and its integration with REST endpoints and STOMP/WebSocket updates.
+
+### Igor Chukarin — Testing, Code Review & Delivery Automation
+
+Igor's responsibilities included:
+
+- Writing unit tests with **JUnit 5** and **Mockito**, including mocked dependencies for isolated testing.
+- Reviewing the application code and making code-quality improvements.
+- Implementing the **GitHub Actions** CI/CD workflows, including automated verification, quality analysis, and coverage reporting.
+- Handling container publication to **GHCR** and **SSH-based deployment** to the production server.
+
+
 
